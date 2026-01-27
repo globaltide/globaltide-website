@@ -105,15 +105,14 @@ async function collectMarketData() {
   console.log('⚠️  Korea 10Y 데이터는 수동 입력이 필요합니다.');
   const kor10y = null;
   
-  // 데이터 객체 생성
+  // 데이터 객체 생성 (created_at 제거)
   const marketData = {
     snapshot_date: today,
     usdkrw_spot: usdkrw,
     us_10y: us10y,
     sofr_30d: sofr30d,
     kor_10y: kor10y,
-    source_type: 'auto_script',
-    created_at: new Date().toISOString()
+    source_type: 'auto_script'
   };
   
   console.log('📦 수집된 데이터:', marketData);
@@ -194,14 +193,14 @@ async function backfillData() {
     const us10y = await fetchFredData('DGS10', threeDaysBefore, dateStr);
     const sofr30d = await fetchFredData('SOFR30DAYAVG', threeDaysBefore, dateStr);
     
+    // 데이터 객체 생성 (created_at 제거)
     const marketData = {
       snapshot_date: dateStr,
       usdkrw_spot: usdkrw,
       us_10y: us10y,
       sofr_30d: sofr30d,
       kor_10y: null,
-      source_type: 'backfill_script',
-      created_at: new Date().toISOString()
+      source_type: 'backfill_script'
     };
     
     console.log(`  📦 수집: USD/KRW=${usdkrw}, US10Y=${us10y}, SOFR=${sofr30d}`);
