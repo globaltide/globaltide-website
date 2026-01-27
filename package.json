@@ -2,10 +2,13 @@
   "name": "globaltide-site",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "GlobalTide Netlify site with analytics functions",
   "scripts": {
     "build": "echo 'No build step needed'",
-    "start": "netlify dev"
+    "start": "netlify dev",
+    "collect-data": "node scripts/fetch-market-data.js daily",
+    "backfill-data": "node scripts/fetch-market-data.js backfill"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
