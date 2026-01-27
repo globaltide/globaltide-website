@@ -189,187 +189,141 @@
 </main>
 
 <script>
-  // Chart Configuration
-  const ctx = document.getElementById('dealChart').getContext('2d');
-  
-  // Generate sample data for the past 12 months
-  const months = [];
-  const dealCounts = [];
-  const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
-  const currentMonth = new Date().getMonth();
-  
-  let totalDeals = 0;
-  for (let i = 11; i >= 0; i--) {
-    const monthIndex = (currentMonth - i + 12) % 12;
-    months.push(monthNames[monthIndex]);
-    const deals = Math.floor(Math.random() * 50) + 80; // Random deals between 80-130
-    dealCounts.push(deals);
-    totalDeals += deals;
-  }
+  let dealChart = null;
 
-  const dealChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: months,
-      datasets: [{
-        label: '거래 건수',
-        data: dealCounts,
-        backgroundColor: 'rgba(99, 102, 241, 0.7)',
-        borderColor: 'rgba(99, 102, 241, 1)',
-        borderWidth: 2,
-        borderRadius: 5
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          labels: {
-            color: '#e5e7eb'
-          }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: 'rgba(255, 255, 255, 0.1)'
-          },
-          ticks: {
-            color: '#9ca3af'
-          }
-        },
-        x: {
-          grid: {
-            display: false
-          },
-          ticks: {
-            color: '#9ca3af'
-          }
-        }
-      }
-    }
-  });
-
-  // SEC Filings - Fetch Data
-  async function fetchSECFilings() {
-    const filingsContainer = document.getElementById('filingsContainer');
-    
+  // Fetch data from API and render
+  async function loadData() {
     try {
-      // Sample filing data representing recent private debt fund filings
-      const sampleFilings = [
-        {
-          company: "Ares Capital Corporation",
-          formType: "10-Q",
-          filedDate: "2026-01-20",
-          description: "분기 보고서",
-          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001287750"
-        },
-        {
-          company: "Blackstone Private Credit Fund",
-          formType: "Form D",
-          filedDate: "2026-01-18",
-          description: "사모 증권 공모",
-          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001823913"
-        },
-        {
-          company: "Blue Owl Credit Income Corp.",
-          formType: "8-K",
-          filedDate: "2026-01-15",
-          description: "현황 보고서",
-          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001823622"
-        },
-        {
-          company: "Golub Capital BDC Inc.",
-          formType: "497",
-          filedDate: "2026-01-12",
-          description: "확정 자료",
-          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001539550"
-        },
-        {
-          company: "FS KKR Capital Corp.",
-          formType: "N-CSR",
-          filedDate: "2026-01-10",
-          description: "주주 연례 보고서",
-          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001422183"
-        },
-        {
-          company: "Sixth Street Specialty Lending",
-          formType: "10-K",
-          filedDate: "2026-01-08",
-          description: "연례 보고서",
-          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001432353"
-        },
-        {
-          company: "Oaktree Specialty Lending",
-          formType: "Form D/A",
-          filedDate: "2026-01-05",
-          description: "수정된 사모 공모",
-          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001414932"
-        },
-        {
-          company: "Apollo Debt Solutions BDC",
-          formType: "485BPOS",
-          filedDate: "2026-01-03",
-          description: "사후 효력 수정",
-          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001880596"
-        },
-        {
-          company: "Capital Southwest Corporation",
-          formType: "10-Q",
-          filedDate: "2025-12-30",
-          description: "분기 보고서",
-          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000015109"
-        },
-        {
-          company: "Main Street Capital Corporation",
-          formType: "8-K",
-          filedDate: "2025-12-28",
-          description: "현황 보고서",
-          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001396440"
-        }
-      ];
+      const response = await fetch('/.netlify/functions/pd');
+      const data = await response.json();
 
-      // Display filings
-      let html = '';
-      sampleFilings.forEach(filing => {
-        const filedDate = new Date(filing.filedDate);
-        const formattedDate = filedDate.toLocaleDateString('ko-KR', { 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
-        });
+      // Update badge with total deals
+      const badge = document.querySelector('.metric-badge');
+      badge.textContent = `Deals (12M): ${data.marketOverview.totalDeals12M}`;
 
-        html += `
-          <div class="filing-item">
-            <div class="filing-company">${filing.company}</div>
-            <div class="filing-details">
-              <strong>양식:</strong> ${filing.formType} | 
-              <strong>제출일:</strong> ${formattedDate} | 
-              <strong>유형:</strong> ${filing.description}
-            </div>
-            <a href="${filing.url}" target="_blank" class="filing-link">SEC EDGAR에서 보기 →</a>
-          </div>
-        `;
-      });
+      // Render chart
+      renderChart(data.marketOverview.dealHistory);
 
-      filingsContainer.innerHTML = html;
+      // Render filings
+      renderFilings(data.secFilings);
 
     } catch (error) {
-      console.error('Error fetching SEC filings:', error);
-      filingsContainer.innerHTML = `
+      console.error('Error loading data:', error);
+      document.getElementById('filingsContainer').innerHTML = `
         <div style="color: #ef4444; padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
-          SEC 파일링 데이터를 불러오는 중 오류가 발생했습니다. 샘플 데이터가 표시됩니다.
+          데이터를 불러오는 중 오류가 발생했습니다.
         </div>
       `;
     }
   }
 
-  // Load filings when page loads
-  document.addEventListener('DOMContentLoaded', fetchSECFilings);
+  function renderChart(dealHistory) {
+    const ctx = document.getElementById('dealChart').getContext('2d');
+    
+    const monthNames = {
+      'Jan': '1월', 'Feb': '2월', 'Mar': '3월', 'Apr': '4월',
+      'May': '5월', 'Jun': '6월', 'Jul': '7월', 'Aug': '8월',
+      'Sep': '9월', 'Oct': '10월', 'Nov': '11월', 'Dec': '12월'
+    };
+
+    const labels = dealHistory.map(d => monthNames[d.month] || d.month);
+    const data = dealHistory.map(d => d.deals);
+
+    if (dealChart) {
+      dealChart.destroy();
+    }
+
+    dealChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: '거래 건수',
+          data: data,
+          backgroundColor: 'rgba(99, 102, 241, 0.7)',
+          borderColor: 'rgba(99, 102, 241, 1)',
+          borderWidth: 2,
+          borderRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: {
+              color: '#e5e7eb'
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(255, 255, 255, 0.1)'
+            },
+            ticks: {
+              color: '#9ca3af'
+            }
+          },
+          x: {
+            grid: {
+              display: false
+            },
+            ticks: {
+              color: '#9ca3af'
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function renderFilings(filings) {
+    const filingsContainer = document.getElementById('filingsContainer');
+    
+    const descriptionMap = {
+      'Quarterly Report': '분기 보고서',
+      'Private Securities Offering': '사모 증권 공모',
+      'Current Report': '현황 보고서',
+      'Definitive Materials': '확정 자료',
+      'Annual Report to Shareholders': '주주 연례 보고서',
+      'Annual Report': '연례 보고서',
+      'Amended Private Offering': '수정된 사모 공모',
+      'Post-Effective Amendment': '사후 효력 수정'
+    };
+
+    let html = '';
+    filings.forEach(filing => {
+      const filedDate = new Date(filing.filedDate);
+      const formattedDate = filedDate.toLocaleDateString('ko-KR', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+
+      const description = descriptionMap[filing.description] || filing.description;
+
+      html += `
+        <div class="filing-item">
+          <div class="filing-company">${filing.company}</div>
+          <div class="filing-details">
+            <strong>양식:</strong> ${filing.formType} | 
+            <strong>제출일:</strong> ${formattedDate} | 
+            <strong>유형:</strong> ${description}
+          </div>
+          <a href="${filing.url}" target="_blank" class="filing-link">SEC EDGAR에서 보기 →</a>
+        </div>
+      `;
+    });
+
+    filingsContainer.innerHTML = html;
+  }
+
+  // Load data when page loads
+  document.addEventListener('DOMContentLoaded', loadData);
 </script>
 </body>
 </html>
