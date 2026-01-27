@@ -11,7 +11,7 @@ export async function handler() {
           region: "Global",
           amount: "1,000억원",
           deadline: "2025-03-15",
-          source: "https://www.koreapost.go.kr/kpost/main/index.jsp"
+          source: "https://www.koreapost.go.kr/kpost/business/listBizNotice.cmd"
         },
         {
           institution: "공무원연금공단",
@@ -19,7 +19,7 @@ export async function handler() {
           region: "Global",
           amount: "2,500억원",
           deadline: "2025-04-01",
-          source: "https://www.geps.or.kr"
+          source: "https://www.geps.or.kr/g/gd/gdMnBbsL.do"
         },
         {
           institution: "금융투자협회",
@@ -27,7 +27,7 @@ export async function handler() {
           region: "Domestic",
           amount: "800억원",
           deadline: "2025-02-28",
-          source: "https://www.kofia.or.kr"
+          source: "https://www.kofia.or.kr/brd/m_174/list.do"
         },
         {
           institution: "국민연금공단",
@@ -35,7 +35,7 @@ export async function handler() {
           region: "Asia Pacific",
           amount: "5,000억원",
           deadline: "2025-05-20",
-          source: "https://www.nps.or.kr"
+          source: "https://fund.nps.or.kr/jsppage/fund/mgs/mgs_rfp_list.jsp"
         },
         {
           institution: "사학연금공단",
@@ -43,7 +43,7 @@ export async function handler() {
           region: "OECD",
           amount: "1,200억원",
           deadline: "2025-03-25",
-          source: "https://www.tp.or.kr"
+          source: "https://www.tp.or.kr/introduce/announce/announceSale.do"
         },
         {
           institution: "한국투자공사(KIC)",
@@ -51,7 +51,7 @@ export async function handler() {
           region: "Europe",
           amount: "3,000억원",
           deadline: "2025-06-15",
-          source: "https://www.kic.kr"
+          source: "https://www.kic.kr/ko/05/01/index.do"
         },
         {
           institution: "예금보험공사",
@@ -59,7 +59,7 @@ export async function handler() {
           region: "Global",
           amount: "1,500억원",
           deadline: "2025-04-30",
-          source: "https://www.kdic.or.kr"
+          source: "https://www.kdic.or.kr/ko/board/bid/list.do"
         },
         {
           institution: "군인연금공단",
@@ -67,7 +67,7 @@ export async function handler() {
           region: "APAC",
           amount: "900억원",
           deadline: "2025-02-15",
-          source: "https://www.mps.mil.kr"
+          source: "https://www.mps.mil.kr/user/boardList.action?boardId=O_46721&siteId=mps"
         }
       ],
       global: [
@@ -77,7 +77,7 @@ export async function handler() {
           region: "US",
           amount: "$2.5B",
           deadline: "2025-03-30",
-          source: "https://www.calpers.ca.gov"
+          source: "https://www.calpers.ca.gov/page/investments/about-investment-office"
         },
         {
           institution: "CPPIB",
@@ -85,7 +85,7 @@ export async function handler() {
           region: "Global",
           amount: "CAD 4B",
           deadline: "2025-04-15",
-          source: "https://www.cppinvestments.com"
+          source: "https://www.cppinvestments.com/about-us/careers"
         },
         {
           institution: "CalSTRS",
@@ -93,7 +93,7 @@ export async function handler() {
           region: "North America",
           amount: "$1.8B",
           deadline: "2025-05-01",
-          source: "https://www.calstrs.com"
+          source: "https://www.calstrs.com/investment-services"
         },
         {
           institution: "OMERS",
@@ -101,7 +101,7 @@ export async function handler() {
           region: "Global",
           amount: "CAD 2.5B",
           deadline: "2025-03-20",
-          source: "https://www.omers.com"
+          source: "https://www.omers.com/investments"
         },
         {
           institution: "New York State Common Retirement Fund",
@@ -109,7 +109,7 @@ export async function handler() {
           region: "Emerging Markets",
           amount: "$3B",
           deadline: "2025-06-30",
-          source: "https://www.osc.state.ny.us"
+          source: "https://www.osc.state.ny.us/retirement/investment-professionals"
         },
         {
           institution: "Teacher Retirement System of Texas",
@@ -117,7 +117,7 @@ export async function handler() {
           region: "Global",
           amount: "$2B",
           deadline: "2025-04-20",
-          source: "https://www.trs.texas.gov"
+          source: "https://www.trs.texas.gov/Pages/investments.aspx"
         },
         {
           institution: "Washington State Investment Board",
@@ -125,7 +125,7 @@ export async function handler() {
           region: "US & Europe",
           amount: "$1.5B",
           deadline: "2025-02-28",
-          source: "https://www.sib.wa.gov"
+          source: "https://www.sib.wa.gov/investments/investment-opportunities.htm"
         },
         {
           institution: "PGGM",
@@ -133,7 +133,7 @@ export async function handler() {
           region: "Europe & APAC",
           amount: "€2B",
           deadline: "2025-05-15",
-          source: "https://www.pggm.nl"
+          source: "https://www.pggm.nl/en/what-we-do/investments/"
         },
         {
           institution: "APG",
@@ -141,7 +141,7 @@ export async function handler() {
           region: "Global",
           amount: "€1.8B",
           deadline: "2025-03-31",
-          source: "https://www.apg.nl"
+          source: "https://www.apg.nl/en/investments"
         },
         {
           institution: "Ontario Teachers' Pension Plan",
@@ -149,7 +149,7 @@ export async function handler() {
           region: "North America",
           amount: "CAD 3B",
           deadline: "2025-04-10",
-          source: "https://www.otpp.com"
+          source: "https://www.otpp.com/en-ca/investments/"
         },
         {
           institution: "CDPQ",
@@ -157,7 +157,7 @@ export async function handler() {
           region: "Global",
           amount: "CAD 2.2B",
           deadline: "2025-05-25",
-          source: "https://www.cdpq.com"
+          source: "https://www.cdpq.com/en/investments"
         },
         {
           institution: "Future Fund (Australia)",
@@ -165,7 +165,7 @@ export async function handler() {
           region: "Asia Pacific",
           amount: "AUD 2B",
           deadline: "2025-06-01",
-          source: "https://www.futurefund.gov.au"
+          source: "https://www.futurefund.gov.au/investment/portfolio"
         },
         {
           institution: "AustralianSuper",
@@ -173,7 +173,7 @@ export async function handler() {
           region: "APAC & Europe",
           amount: "AUD 1.5B",
           deadline: "2025-03-15",
-          source: "https://www.australiansuper.com"
+          source: "https://www.australiansuper.com/investments"
         },
         {
           institution: "USS (UK)",
@@ -181,7 +181,7 @@ export async function handler() {
           region: "Global",
           amount: "£1.5B",
           deadline: "2025-04-25",
-          source: "https://www.uss.co.uk"
+          source: "https://www.uss.co.uk/for-members/investments"
         },
         {
           institution: "BCI (British Columbia)",
@@ -189,7 +189,7 @@ export async function handler() {
           region: "North America",
           amount: "CAD 1.8B",
           deadline: "2025-02-20",
-          source: "https://www.bci.ca"
+          source: "https://www.bci.ca/investments/"
         },
         {
           institution: "SWFF (Swedish AP Funds)",
@@ -197,7 +197,7 @@ export async function handler() {
           region: "Global",
           amount: "SEK 15B",
           deadline: "2025-05-10",
-          source: "https://www.ap1.se"
+          source: "https://www.ap1.se/en/our-investments/"
         },
         {
           institution: "GPIF (Japan)",
@@ -205,7 +205,7 @@ export async function handler() {
           region: "Asia Pacific",
           amount: "¥300B",
           deadline: "2025-06-20",
-          source: "https://www.gpif.go.jp"
+          source: "https://www.gpif.go.jp/en/investment/"
         },
         {
           institution: "GIC (Singapore)",
@@ -213,7 +213,7 @@ export async function handler() {
           region: "Global",
           amount: "$2.5B",
           deadline: "2025-04-05",
-          source: "https://www.gic.com.sg"
+          source: "https://www.gic.com.sg/investments/"
         },
         {
           institution: "Temasek",
@@ -221,7 +221,7 @@ export async function handler() {
           region: "Global",
           amount: "$1.2B",
           deadline: "2025-03-28",
-          source: "https://www.temasek.com.sg"
+          source: "https://www.temasek.com.sg/en/our-portfolio/portfolio-highlights"
         },
         {
           institution: "ADIA (Abu Dhabi)",
@@ -229,7 +229,7 @@ export async function handler() {
           region: "Global",
           amount: "$3.5B",
           deadline: "2025-07-01",
-          source: "https://www.adia.ae"
+          source: "https://www.adia.ae/en/investment"
         }
       ]
     })
