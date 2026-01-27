@@ -1,401 +1,375 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Private Debt Market | GlobalTide</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="utf-8" />
+  <title>Private Debt | GlobalTide</title>
+  <script defer src="/nav-top.js"></script>
+  <script defer src="/nav-bottom.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #0b1020;
+      color: #e5e7eb;
+    }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 14px;
+      padding-top: calc(var(--gt-topnav-h, 56px) + 20px);
+      padding-bottom: calc(var(--gt-bottomnav-h, 64px) + 20px);
+    }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+    h1 {
+      color: #fff;
+      font-size: 2rem;
+      margin-bottom: 30px;
+      text-align: center;
+    }
 
-        h1 {
-            color: white;
-            text-align: center;
-            font-size: 2.5rem;
-            margin-bottom: 40px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
+    .card {
+      background: rgba(255, 255, 255, .05);
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 14px;
+      padding: 20px;
+      margin-top: 20px;
+    }
 
-        .chart-section {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
+    .chart-header h2 {
+      color: #fff;
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+    }
 
-        .chart-header {
-            margin-bottom: 20px;
-        }
+    .chart-description {
+      color: #9ca3af;
+      line-height: 1.6;
+      margin-bottom: 15px;
+      padding: 12px;
+      background: rgba(255, 255, 255, .03);
+      border-radius: 8px;
+      border-left: 3px solid #6366f1;
+      font-size: 0.95rem;
+    }
 
-        .chart-title {
-            font-size: 1.8rem;
-            color: #333;
-            margin-bottom: 10px;
-        }
+    .metric-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 15px;
+    }
 
-        .chart-description {
-            color: #666;
-            line-height: 1.6;
-            margin-bottom: 15px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-        }
+    .chart-wrapper {
+      position: relative;
+      height: 280px;
+      margin-top: 15px;
+    }
 
-        .metric-badge {
-            display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 600;
-            margin-right: 10px;
-            margin-bottom: 10px;
-        }
+    .filings-header {
+      color: #fff;
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+      border-bottom: 2px solid rgba(99, 102, 241, 0.5);
+      padding-bottom: 10px;
+    }
 
-        .chart-wrapper {
-            position: relative;
-            height: 300px;
-            margin-top: 20px;
-        }
+    .filings-description {
+      color: #9ca3af;
+      margin-bottom: 20px;
+      padding: 12px;
+      background: rgba(255, 255, 255, .03);
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
 
-        .filings-section {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
+    .loading {
+      text-align: center;
+      padding: 30px;
+      color: #9ca3af;
+      font-size: 1rem;
+    }
 
-        .filings-header {
-            font-size: 1.8rem;
-            color: #333;
-            margin-bottom: 20px;
-            border-bottom: 3px solid #667eea;
-            padding-bottom: 10px;
-        }
+    .filing-item {
+      padding: 12px;
+      margin-bottom: 8px;
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      background: rgba(255, 255, 255, .02);
+    }
 
-        .filings-description {
-            color: #666;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
+    .filing-item:hover {
+      background: rgba(255, 255, 255, .05);
+      border-color: #6366f1;
+      transform: translateX(3px);
+    }
 
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-            font-size: 1.1rem;
-        }
+    .filing-company {
+      font-weight: 600;
+      color: #fff;
+      font-size: 1rem;
+      margin-bottom: 5px;
+    }
 
-        .filing-item {
-            padding: 15px;
-            margin-bottom: 10px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
+    .filing-details {
+      color: #9ca3af;
+      font-size: 0.85rem;
+      margin-bottom: 5px;
+    }
 
-        .filing-item:hover {
-            background: #f8f9fa;
-            border-color: #667eea;
-            transform: translateX(5px);
-        }
+    .filing-link {
+      color: #6366f1;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
 
-        .filing-company {
-            font-weight: 600;
-            color: #333;
-            font-size: 1.1rem;
-            margin-bottom: 5px;
-        }
+    .filing-link:hover {
+      color: #8b5cf6;
+      text-decoration: underline;
+    }
 
-        .filing-details {
-            color: #666;
-            font-size: 0.9rem;
-            margin-bottom: 5px;
-        }
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 1.6rem;
+      }
 
-        .filing-link {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-        }
+      .chart-wrapper {
+        height: 240px;
+      }
 
-        .filing-link:hover {
-            text-decoration: underline;
-        }
-
-        .error {
-            background: #ffe0e0;
-            border: 1px solid #ff4444;
-            color: #cc0000;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-        }
-
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 2rem;
-            }
-
-            .chart-title, .filings-header {
-                font-size: 1.4rem;
-            }
-
-            .chart-wrapper {
-                height: 250px;
-            }
-        }
-    </style>
+      .card {
+        padding: 15px;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Private Debt Market</h1>
+<main>
+  <h1>Private Debt Market</h1>
 
-        <!-- Chart Section -->
-        <div class="chart-section">
-            <div class="chart-header">
-                <h2 class="chart-title">Senior Direct Lending Market Overview</h2>
-                <div class="chart-description">
-                    <strong>What this chart shows:</strong> The Senior Direct Lending market has seen significant growth over the past 12 months. 
-                    This chart visualizes the monthly distribution of deal flow, demonstrating the market's active lending environment. 
-                    Senior direct lending refers to loans made directly to middle-market companies, typically secured by company assets and having priority in repayment.
-                </div>
-                <div class="metric-badge">Deals (12M): 1,240</div>
-                <div class="chart-description" style="margin-top: 10px;">
-                    <strong>What "Deals (12M): 1,240" means:</strong> This represents the total number of senior direct lending transactions 
-                    completed over the last 12 months. This metric indicates strong market activity and demonstrates the growing appetite 
-                    for private debt as an alternative investment strategy.
-                </div>
-            </div>
-            <div class="chart-wrapper">
-                <canvas id="dealChart"></canvas>
-            </div>
-        </div>
-
-        <!-- SEC Filings Section -->
-        <div class="filings-section">
-            <h2 class="filings-header">SEC Filings</h2>
-            <div class="filings-description">
-                <strong>Recent Private Debt Fund Filings:</strong> This section displays the most recent SEC filings from private debt funds. 
-                These filings include Form D (private securities offerings), Form ADV (investment adviser registrations), and other relevant 
-                regulatory documents that provide transparency into the private debt market.
-            </div>
-            <div id="filingsContainer">
-                <div class="loading">Loading recent private debt fund filings...</div>
-            </div>
-        </div>
+  <!-- Chart Section -->
+  <div class="card">
+    <div class="chart-header">
+      <h2>Senior Direct Lending Market Overview</h2>
+      <div class="chart-description">
+        <strong>이 차트의 의미:</strong> Senior Direct Lending 시장은 지난 12개월간 상당한 성장을 보였습니다. 
+        이 차트는 월별 거래 흐름의 분포를 시각화하여 시장의 활발한 대출 환경을 보여줍니다. 
+        Senior direct lending은 중견기업에 직접 대출하는 것을 의미하며, 일반적으로 회사 자산으로 담보되고 상환 우선순위를 가집니다.
+      </div>
+      <div class="metric-badge">Deals (12M): 1,240</div>
+      <div class="chart-description" style="margin-top: 10px;">
+        <strong>"Deals (12M): 1,240"의 의미:</strong> 지난 12개월간 완료된 총 senior direct lending 거래 건수를 나타냅니다. 
+        이 지표는 강력한 시장 활동성을 나타내며, 대체 투자 전략으로서 private debt에 대한 수요가 증가하고 있음을 보여줍니다.
+      </div>
     </div>
+    <div class="chart-wrapper">
+      <canvas id="dealChart"></canvas>
+    </div>
+  </div>
 
-    <script>
-        // Chart Configuration
-        const ctx = document.getElementById('dealChart').getContext('2d');
-        
-        // Generate sample data for the past 12 months
-        const months = [];
-        const dealCounts = [];
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const currentMonth = new Date().getMonth();
-        
-        let totalDeals = 0;
-        for (let i = 11; i >= 0; i--) {
-            const monthIndex = (currentMonth - i + 12) % 12;
-            months.push(monthNames[monthIndex]);
-            const deals = Math.floor(Math.random() * 50) + 80; // Random deals between 80-130
-            dealCounts.push(deals);
-            totalDeals += deals;
+  <!-- SEC Filings Section -->
+  <div class="card">
+    <h2 class="filings-header">SEC Filings</h2>
+    <div class="filings-description">
+      <strong>최근 Private Debt 펀드 파일링:</strong> 이 섹션은 private debt 펀드의 최신 SEC 파일링을 표시합니다. 
+      이러한 파일링에는 Form D(사모 증권 공모), Form ADV(투자자문사 등록) 및 private debt 시장의 투명성을 제공하는 
+      기타 관련 규제 문서가 포함됩니다.
+    </div>
+    <div id="filingsContainer">
+      <div class="loading">최근 private debt 펀드 파일링을 불러오는 중...</div>
+    </div>
+  </div>
+</main>
+
+<script>
+  // Chart Configuration
+  const ctx = document.getElementById('dealChart').getContext('2d');
+  
+  // Generate sample data for the past 12 months
+  const months = [];
+  const dealCounts = [];
+  const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+  const currentMonth = new Date().getMonth();
+  
+  let totalDeals = 0;
+  for (let i = 11; i >= 0; i--) {
+    const monthIndex = (currentMonth - i + 12) % 12;
+    months.push(monthNames[monthIndex]);
+    const deals = Math.floor(Math.random() * 50) + 80; // Random deals between 80-130
+    dealCounts.push(deals);
+    totalDeals += deals;
+  }
+
+  const dealChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: months,
+      datasets: [{
+        label: '거래 건수',
+        data: dealCounts,
+        backgroundColor: 'rgba(99, 102, 241, 0.7)',
+        borderColor: 'rgba(99, 102, 241, 1)',
+        borderWidth: 2,
+        borderRadius: 5
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            color: '#e5e7eb'
+          }
         }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: 'rgba(255, 255, 255, 0.1)'
+          },
+          ticks: {
+            color: '#9ca3af'
+          }
+        },
+        x: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            color: '#9ca3af'
+          }
+        }
+      }
+    }
+  });
 
-        const dealChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: months,
-                datasets: [{
-                    label: 'Number of Deals',
-                    data: dealCounts,
-                    backgroundColor: 'rgba(102, 126, 234, 0.7)',
-                    borderColor: 'rgba(102, 126, 234, 1)',
-                    borderWidth: 2,
-                    borderRadius: 5
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    },
-                    title: {
-                        display: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    }
-                }
-            }
+  // SEC Filings - Fetch Data
+  async function fetchSECFilings() {
+    const filingsContainer = document.getElementById('filingsContainer');
+    
+    try {
+      // Sample filing data representing recent private debt fund filings
+      const sampleFilings = [
+        {
+          company: "Ares Capital Corporation",
+          formType: "10-Q",
+          filedDate: "2026-01-20",
+          description: "분기 보고서",
+          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001287750"
+        },
+        {
+          company: "Blackstone Private Credit Fund",
+          formType: "Form D",
+          filedDate: "2026-01-18",
+          description: "사모 증권 공모",
+          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001823913"
+        },
+        {
+          company: "Blue Owl Credit Income Corp.",
+          formType: "8-K",
+          filedDate: "2026-01-15",
+          description: "현황 보고서",
+          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001823622"
+        },
+        {
+          company: "Golub Capital BDC Inc.",
+          formType: "497",
+          filedDate: "2026-01-12",
+          description: "확정 자료",
+          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001539550"
+        },
+        {
+          company: "FS KKR Capital Corp.",
+          formType: "N-CSR",
+          filedDate: "2026-01-10",
+          description: "주주 연례 보고서",
+          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001422183"
+        },
+        {
+          company: "Sixth Street Specialty Lending",
+          formType: "10-K",
+          filedDate: "2026-01-08",
+          description: "연례 보고서",
+          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001432353"
+        },
+        {
+          company: "Oaktree Specialty Lending",
+          formType: "Form D/A",
+          filedDate: "2026-01-05",
+          description: "수정된 사모 공모",
+          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001414932"
+        },
+        {
+          company: "Apollo Debt Solutions BDC",
+          formType: "485BPOS",
+          filedDate: "2026-01-03",
+          description: "사후 효력 수정",
+          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001880596"
+        },
+        {
+          company: "Capital Southwest Corporation",
+          formType: "10-Q",
+          filedDate: "2025-12-30",
+          description: "분기 보고서",
+          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000015109"
+        },
+        {
+          company: "Main Street Capital Corporation",
+          formType: "8-K",
+          filedDate: "2025-12-28",
+          description: "현황 보고서",
+          url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001396440"
+        }
+      ];
+
+      // Display filings
+      let html = '';
+      sampleFilings.forEach(filing => {
+        const filedDate = new Date(filing.filedDate);
+        const formattedDate = filedDate.toLocaleDateString('ko-KR', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
         });
 
-        // SEC Filings - Fetch Data
-        async function fetchSECFilings() {
-            const filingsContainer = document.getElementById('filingsContainer');
-            
-            try {
-                // Note: In production, you would use a proper SEC API with authentication
-                // This is a demonstration using publicly available SEC data
-                
-                // For demonstration, we'll create sample filing data
-                // In production, you would replace this with actual API calls to:
-                // 1. SEC EDGAR API (https://data.sec.gov/submissions/)
-                // 2. A third-party SEC API service (e.g., sec-api.io)
-                
-                const sampleFilings = [
-                    {
-                        company: "Ares Capital Corporation",
-                        formType: "10-Q",
-                        filedDate: "2026-01-20",
-                        description: "Quarterly Report",
-                        url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001287750"
-                    },
-                    {
-                        company: "Blackstone Private Credit Fund",
-                        formType: "Form D",
-                        filedDate: "2026-01-18",
-                        description: "Private Securities Offering",
-                        url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001823913"
-                    },
-                    {
-                        company: "Blue Owl Credit Income Corp.",
-                        formType: "8-K",
-                        filedDate: "2026-01-15",
-                        description: "Current Report",
-                        url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001823622"
-                    },
-                    {
-                        company: "Golub Capital BDC Inc.",
-                        formType: "497",
-                        filedDate: "2026-01-12",
-                        description: "Definitive Materials",
-                        url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001539550"
-                    },
-                    {
-                        company: "FS KKR Capital Corp.",
-                        formType: "N-CSR",
-                        filedDate: "2026-01-10",
-                        description: "Annual Report to Shareholders",
-                        url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001422183"
-                    },
-                    {
-                        company: "Sixth Street Specialty Lending",
-                        formType: "10-K",
-                        filedDate: "2026-01-08",
-                        description: "Annual Report",
-                        url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001432353"
-                    },
-                    {
-                        company: "Oaktree Specialty Lending",
-                        formType: "Form D/A",
-                        filedDate: "2026-01-05",
-                        description: "Amended Private Offering",
-                        url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001414932"
-                    },
-                    {
-                        company: "Apollo Debt Solutions BDC",
-                        formType: "485BPOS",
-                        filedDate: "2026-01-03",
-                        description: "Post-Effective Amendment",
-                        url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001880596"
-                    },
-                    {
-                        company: "Capital Southwest Corporation",
-                        formType: "10-Q",
-                        filedDate: "2025-12-30",
-                        description: "Quarterly Report",
-                        url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000015109"
-                    },
-                    {
-                        company: "Main Street Capital Corporation",
-                        formType: "8-K",
-                        filedDate: "2025-12-28",
-                        description: "Current Report",
-                        url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001396440"
-                    }
-                ];
+        html += `
+          <div class="filing-item">
+            <div class="filing-company">${filing.company}</div>
+            <div class="filing-details">
+              <strong>양식:</strong> ${filing.formType} | 
+              <strong>제출일:</strong> ${formattedDate} | 
+              <strong>유형:</strong> ${filing.description}
+            </div>
+            <a href="${filing.url}" target="_blank" class="filing-link">SEC EDGAR에서 보기 →</a>
+          </div>
+        `;
+      });
 
-                // Display filings
-                let html = '';
-                sampleFilings.forEach(filing => {
-                    const filedDate = new Date(filing.filedDate);
-                    const formattedDate = filedDate.toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'short', 
-                        day: 'numeric' 
-                    });
+      filingsContainer.innerHTML = html;
 
-                    html += `
-                        <div class="filing-item">
-                            <div class="filing-company">${filing.company}</div>
-                            <div class="filing-details">
-                                <strong>Form:</strong> ${filing.formType} | 
-                                <strong>Filed:</strong> ${formattedDate} | 
-                                <strong>Type:</strong> ${filing.description}
-                            </div>
-                            <a href="${filing.url}" target="_blank" class="filing-link">View on SEC EDGAR →</a>
-                        </div>
-                    `;
-                });
+    } catch (error) {
+      console.error('Error fetching SEC filings:', error);
+      filingsContainer.innerHTML = `
+        <div style="color: #ef4444; padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
+          SEC 파일링 데이터를 불러오는 중 오류가 발생했습니다. 샘플 데이터가 표시됩니다.
+        </div>
+      `;
+    }
+  }
 
-                filingsContainer.innerHTML = html;
-
-            } catch (error) {
-                console.error('Error fetching SEC filings:', error);
-                filingsContainer.innerHTML = `
-                    <div class="error">
-                        <strong>Note:</strong> Unable to load real-time SEC filings. 
-                        Sample data is displayed. To implement live data, you'll need to:
-                        <ul style="margin-top: 10px; margin-left: 20px;">
-                            <li>Register for a SEC EDGAR API key or use a service like sec-api.io</li>
-                            <li>Implement server-side API calls to avoid CORS issues</li>
-                            <li>Filter for Form D, Form ADV, and BDC-related filings</li>
-                        </ul>
-                    </div>
-                `;
-            }
-        }
-
-        // Load filings when page loads
-        document.addEventListener('DOMContentLoaded', fetchSECFilings);
-    </script>
+  // Load filings when page loads
+  document.addEventListener('DOMContentLoaded', fetchSECFilings);
+</script>
 </body>
 </html>
