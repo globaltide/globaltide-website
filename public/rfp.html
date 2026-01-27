@@ -2,53 +2,254 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <title>RFP | GlobalTide</title>
+  <title>RFP Monitor | GlobalTide</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script defer src="/nav-top.js"></script>
   <script defer src="/nav-bottom.js"></script>
 
   <style>
-    body{margin:0;font-family:-apple-system;background:#0b1020;color:#e5e7eb}
-    main{max-width:1100px;margin:0 auto;padding:24px 14px;
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0b1020;color:#e5e7eb}
+    main{max-width:1200px;margin:0 auto;padding:24px 14px;
       padding-top:calc(var(--gt-topnav-h,56px)+20px);
       padding-bottom:calc(var(--gt-bottomnav-h,64px)+20px)}
+    
+    .header-section{margin-bottom:24px}
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px}
+    .stat-card{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);
+      border-radius:12px;padding:16px;text-align:center}
+    .stat-number{font-size:28px;font-weight:700;color:#60a5fa;margin:0}
+    .stat-label{font-size:13px;color:#9ca3af;margin-top:4px}
+    
+    .controls{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+      border-radius:14px;padding:18px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+    .search-box{flex:1;min-width:200px;padding:10px 14px;background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#e5e7eb;font-size:14px}
+    .search-box::placeholder{color:#9ca3af}
+    
+    .filter-group{display:flex;gap:8px;flex-wrap:wrap}
+    .filter-btn{padding:8px 16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+      border-radius:8px;color:#e5e7eb;cursor:pointer;font-size:13px;transition:all .2s}
+    .filter-btn:hover{background:rgba(255,255,255,.12)}
+    .filter-btn.active{background:rgba(59,130,246,.2);border-color:rgba(59,130,246,.5);color:#60a5fa}
+    
     .card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
-      border-radius:14px;padding:14px;margin-top:14px}
-    h1{font-size:22px}
-    h2{font-size:16px;margin-top:20px}
-    li{margin:6px 0}
-    a{color:#93c5fd}
+      border-radius:14px;padding:20px;margin-bottom:16px}
+    .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+    .badge{display:inline-block;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;text-transform:uppercase}
+    .badge-domestic{background:rgba(34,197,94,.2);color:#4ade80;border:1px solid rgba(34,197,94,.3)}
+    .badge-global{background:rgba(147,51,234,.2);color:#a855f7;border:1px solid rgba(147,51,234,.3)}
+    .badge-urgent{background:rgba(239,68,68,.2);color:#f87171;border:1px solid rgba(239,68,68,.3);margin-left:8px}
+    
+    h1{font-size:28px;margin:0 0 8px 0;font-weight:700}
+    .subtitle{color:#9ca3af;font-size:14px;margin-bottom:20px}
+    h2{font-size:18px;margin:0;font-weight:600;color:#e5e7eb}
+    .count{color:#9ca3af;font-size:14px;font-weight:400;margin-left:8px}
+    
+    .rfp-list{list-style:none;padding:0;margin:0}
+    .rfp-item{padding:14px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+    .rfp-item:last-child{border-bottom:none}
+    .rfp-institution{font-weight:600;color:#60a5fa;font-size:15px;margin-bottom:4px}
+    .rfp-details{color:#d1d5db;font-size:13px;line-height:1.6}
+    .rfp-meta{display:flex;gap:16px;margin-top:6px;flex-wrap:wrap}
+    .meta-item{color:#9ca3af;font-size:12px}
+    .meta-item strong{color:#e5e7eb;margin-right:4px}
+    
+    .source-link{color:#93c5fd;text-decoration:none;font-size:13px;transition:color .2s}
+    .source-link:hover{color:#60a5fa;text-decoration:underline}
+    
+    .empty-state{text-align:center;padding:40px;color:#9ca3af}
+    .loading{text-align:center;padding:40px;color:#9ca3af}
+    
+    @media (max-width: 640px) {
+      .stats-grid{grid-template-columns:repeat(2,1fr)}
+      .controls{flex-direction:column;align-items:stretch}
+      .search-box{width:100%}
+      h1{font-size:24px}
+    }
   </style>
-
-  <script>
-    fetch("/.netlify/functions/rfp")
-      .then(r=>r.json())
-      .then(d=>{
-        const dom = d.domestic.map(x =>
-          `<li><b>${x.institution}</b> – ${x.asset} (${x.region}) / 마감 ${x.deadline}
-           <a href="${x.source}" target="_blank">원문</a></li>`
-        ).join("");
-        const glo = d.global.map(x =>
-          `<li><b>${x.institution}</b> – ${x.asset} (${x.region}) / 마감 ${x.deadline}
-           <a href="${x.source}" target="_blank">원문</a></li>`
-        ).join("");
-        document.getElementById("dom").innerHTML = dom;
-        document.getElementById("glo").innerHTML = glo;
-      });
-  </script>
 </head>
 <body>
 <main>
-  <h1>RFP Monitor</h1>
+  <div class="header-section">
+    <h1>🔍 RFP Monitor</h1>
+    <p class="subtitle">실시간 국내외 기관투자자 RFP 공고 모니터링</p>
+  </div>
 
-  <div class="card">
-    <h2>국내 기관</h2>
-    <ul id="dom"></ul>
+  <div class="stats-grid" id="stats">
+    <div class="stat-card">
+      <div class="stat-number" id="total-count">-</div>
+      <div class="stat-label">전체 공고</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" id="domestic-count">-</div>
+      <div class="stat-label">국내 기관</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" id="global-count">-</div>
+      <div class="stat-label">글로벌 연기금</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" id="urgent-count">-</div>
+      <div class="stat-label">마감 임박</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <input type="text" class="search-box" id="search" placeholder="기관명, 자산군, 지역으로 검색...">
+    <div class="filter-group">
+      <button class="filter-btn active" data-filter="all">전체</button>
+      <button class="filter-btn" data-filter="domestic">국내</button>
+      <button class="filter-btn" data-filter="global">글로벌</button>
+      <button class="filter-btn" data-filter="urgent">마감임박</button>
+    </div>
   </div>
 
   <div class="card">
-    <h2>글로벌 연기금</h2>
-    <ul id="glo"></ul>
+    <div class="card-header">
+      <div>
+        <h2>국내 기관 <span class="count" id="dom-count">0건</span></h2>
+      </div>
+    </div>
+    <ul class="rfp-list" id="dom">
+      <div class="loading">데이터 로딩 중...</div>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h2>글로벌 연기금 <span class="count" id="glo-count">0건</span></h2>
+      </div>
+    </div>
+    <ul class="rfp-list" id="glo">
+      <div class="loading">데이터 로딩 중...</div>
+    </ul>
   </div>
 </main>
+
+<script>
+let allData = { domestic: [], global: [] };
+let currentFilter = 'all';
+let searchQuery = '';
+
+function isUrgent(deadline) {
+  const deadlineDate = new Date(deadline);
+  const today = new Date();
+  const diff = (deadlineDate - today) / (1000 * 60 * 60 * 24);
+  return diff <= 7 && diff >= 0;
+}
+
+function renderRFPItem(item, type) {
+  const urgent = isUrgent(item.deadline);
+  const badgeType = type === 'domestic' ? 'badge-domestic' : 'badge-global';
+  const urgentBadge = urgent ? '<span class="badge badge-urgent">마감임박</span>' : '';
+  
+  return `
+    <li class="rfp-item" data-type="${type}" data-urgent="${urgent}">
+      <div class="rfp-institution">
+        <span class="badge ${badgeType}">${type === 'domestic' ? '국내' : '글로벌'}</span>
+        ${urgentBadge}
+        ${item.institution}
+      </div>
+      <div class="rfp-details">${item.asset}</div>
+      <div class="rfp-meta">
+        <span class="meta-item"><strong>지역:</strong> ${item.region}</span>
+        <span class="meta-item"><strong>마감:</strong> ${item.deadline}</span>
+        ${item.amount ? `<span class="meta-item"><strong>규모:</strong> ${item.amount}</span>` : ''}
+      </div>
+      <a href="${item.source}" target="_blank" class="source-link" rel="noopener noreferrer">
+        📄 공고 원문 보기 →
+      </a>
+    </li>
+  `;
+}
+
+function applyFilters() {
+  let domesticFiltered = allData.domestic;
+  let globalFiltered = allData.global;
+  
+  if (searchQuery) {
+    const query = searchQuery.toLowerCase();
+    domesticFiltered = domesticFiltered.filter(item => 
+      item.institution.toLowerCase().includes(query) ||
+      item.asset.toLowerCase().includes(query) ||
+      item.region.toLowerCase().includes(query)
+    );
+    globalFiltered = globalFiltered.filter(item => 
+      item.institution.toLowerCase().includes(query) ||
+      item.asset.toLowerCase().includes(query) ||
+      item.region.toLowerCase().includes(query)
+    );
+  }
+  
+  if (currentFilter === 'domestic') {
+    globalFiltered = [];
+  } else if (currentFilter === 'global') {
+    domesticFiltered = [];
+  } else if (currentFilter === 'urgent') {
+    domesticFiltered = domesticFiltered.filter(item => isUrgent(item.deadline));
+    globalFiltered = globalFiltered.filter(item => isUrgent(item.deadline));
+  }
+  
+  renderLists(domesticFiltered, globalFiltered);
+}
+
+function renderLists(domesticData, globalData) {
+  const domElement = document.getElementById('dom');
+  const gloElement = document.getElementById('glo');
+  
+  if (domesticData.length === 0) {
+    domElement.innerHTML = '<div class="empty-state">해당하는 공고가 없습니다.</div>';
+  } else {
+    domElement.innerHTML = domesticData.map(x => renderRFPItem(x, 'domestic')).join('');
+  }
+  
+  if (globalData.length === 0) {
+    gloElement.innerHTML = '<div class="empty-state">해당하는 공고가 없습니다.</div>';
+  } else {
+    gloElement.innerHTML = globalData.map(x => renderRFPItem(x, 'global')).join('');
+  }
+  
+  document.getElementById('dom-count').textContent = `${domesticData.length}건`;
+  document.getElementById('glo-count').textContent = `${globalData.length}건`;
+}
+
+function updateStats() {
+  const totalCount = allData.domestic.length + allData.global.length;
+  const urgentCount = [...allData.domestic, ...allData.global].filter(item => isUrgent(item.deadline)).length;
+  
+  document.getElementById('total-count').textContent = totalCount;
+  document.getElementById('domestic-count').textContent = allData.domestic.length;
+  document.getElementById('global-count').textContent = allData.global.length;
+  document.getElementById('urgent-count').textContent = urgentCount;
+}
+
+fetch("/.netlify/functions/rfp")
+  .then(r => r.json())
+  .then(data => {
+    allData = data;
+    updateStats();
+    applyFilters();
+  })
+  .catch(err => {
+    console.error('RFP 데이터 로드 실패:', err);
+    document.getElementById('dom').innerHTML = '<div class="empty-state">데이터를 불러오는데 실패했습니다.</div>';
+    document.getElementById('glo').innerHTML = '<div class="empty-state">데이터를 불러오는데 실패했습니다.</div>';
+  });
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    applyFilters();
+  });
+});
+
+document.getElementById('search').addEventListener('input', (e) => {
+  searchQuery = e.target.value;
+  applyFilters();
+});
+</script>
 </body>
 </html>
