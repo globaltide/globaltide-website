@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GlobalTide · Search</title>
+
+  <link rel="stylesheet" href="/css/search.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Excel 버튼 강조 스타일 -->
+  <style>
+    .kw-row{
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .btn.excel{
+      background: #107c41; /* Excel green */
+      color: #fff;
+      font-weight: 700;
+      border: 1px solid rgba(0,0,0,.1);
+    }
+    .btn.excel:hover{
+      filter: brightness(1.05);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="swipe-root">
+    <div class="wrap">
+      <section class="card">
+        <div class="top-row">
+          <div>
+            <div class="title">Search</div>
+            <div class="subtitle">특정 단어로 검색해서 결과를 뿌립니다</div>
+          </div>
+
+          <div class="top-actions">
+            <button class="btn secondary" id="btnLogin">로그인</button>
+            <button class="btn secondary" id="btnLogout" style="display:none;">로그아웃</button>
+            <button class="btn" id="btnKeywordManage">내 키워드 관리</button>
+          </div>
+        </div>
+
+        <div class="searchbar">
+          <input id="qInput" type="text" placeholder="검색어 입력 (예: Private Debt)" />
+          <button class="btn" id="btnSearch">검색</button>
+        </div>
+
+        <div class="kw-panel" id="kwPanel" style="display:none;">
+          <div class="kw-panel-head">
+            <div class="kw-userline" id="kwUserLine"></div>
+          </div>
+
+          <!-- ✅ 추가 버튼 오른쪽에 Excel 버튼 -->
+          <div class="kw-row">
+            <input id="kwInput" type="text" placeholder="키워드 추가 (예: direct lending)" />
+            <button class="btn" id="kwAddBtn">추가</button>
+            <button class="btn excel" id="btnExportXlsx" style="display:none;">Excel</button>
+          </div>
+
+          <div class="kw-chips" id="kwChips"></div>
+          <div class="kw-status" id="kwStatus"></div>
+        </div>
+
+        <div class="meta" id="status"></div>
+        <div class="posts" id="posts"></div>
+        <div class="errbox" id="errbox" style="display:none;"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- 공용 네비 -->
+  <script src="/nav-top.js"></script>
+  <script src="/nav-bottom.js"></script>
+  <script src="/swipe-nav.js"></script>
+
+  <!-- XLSX -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- search 로직 -->
+  <script type="module" src="/js/search/main.js"></script>
+</body>
+</html>

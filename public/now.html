@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GlobalTide · Now</title>
+
+  <!-- Supabase UMD -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/now.css" />
+</head>
+
+<body>
+  <!-- ✅ header 제거됨: 상단 메뉴는 nav-top.js가 주입 -->
+
+  <div class="toolbar">
+    <div class="seg" id="catSeg">
+      <div class="btn active" data-cat="Market">Market</div>
+      <div class="btn" data-cat="Private Debt">Private Debt</div>
+
+      <select class="select" id="catMore">
+        <option value="">Select</option>
+        <option value="Private Equity">Private Equity</option>
+        <option value="Real Estate">Real Estate</option>
+        <option value="Infrastructure">Infrastructure</option>
+      </select>
+    </div>
+
+    <div style="flex:1"></div>
+
+    <div class="seg" id="rangeSeg">
+      <div class="btn active" data-range="Recent">Recent</div>
+      <div class="btn" data-range="Figures">Figures</div>
+      <div class="btn" data-range="Chart">Chart</div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <!-- Recent -->
+    <div id="viewRecent">
+      <section class="card">
+        <h2 class="title" style="margin-bottom:10px;">FX & Swap</h2>
+        <div class="row">
+          <div>
+            <div class="muted-xs">USD/KRW (spot)</div>
+            <div id="usdkrwSpot" class="bold-loading">—</div>
+          </div>
+          <div>
+            <div class="muted-xs">USD/KRW 1Y swap</div>
+            <div id="usdkrwSwap1y" class="bold-loading">—</div>
+            <div id="swapDetail" class="swap-sub"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="title" style="margin-bottom:10px;">Bond Yields & SOFR</h2>
+        <div class="row">
+          <div>
+            <div class="muted-xs">Korea 10Y</div>
+            <div id="kor10" class="bold-loading">—</div>
+          </div>
+          <div>
+            <div class="muted-xs">US 10Y</div>
+            <div id="us10" class="bold-loading">—</div>
+          </div>
+          <div>
+            <div class="muted-xs">Sofr(30d-avg)</div>
+            <div id="sofr30d" class="bold-loading">—</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Figures -->
+    <div id="viewFigures" class="hidden">
+      <section class="card">
+        <h2 class="title">Figures (Daily, up to 120 months)</h2>
+        <div class="muted2" style="margin:-2px 0 10px;" id="figSourceText"></div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>USD/KRW</th>
+                <th>Korea 10Y</th>
+                <th>US 10Y</th>
+                <th>SOFR 30d</th>
+              </tr>
+            </thead>
+            <tbody id="figTbody">
+              <tr><td colspan="5" style="text-align:center;color:#888;padding:20px;">Press Figures to load…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="figStatus" class="muted2" style="margin-top:10px;"></div>
+      </section>
+    </div>
+
+    <!-- Chart -->
+    <div id="viewChart" class="hidden">
+      <section class="card">
+        <h2 class="title">Chart (up to 3 years)</h2>
+        <div class="muted2" style="margin:-2px 0 10px;" id="chartSourceText"></div>
+
+        <div class="chart-wrap" id="chartWrap">
+          <canvas id="chartCanvas"></canvas>
+          <div class="tooltip" id="chartTip"></div>
+        </div>
+        <div id="chartLegend" class="chart-legend"></div>
+        <div id="chartStatus" class="muted2" style="margin-top:8px;"></div>
+      </section>
+    </div>
+
+    <!-- Placeholder -->
+    <div id="viewPlaceholder" class="hidden">
+      <section class="card">
+        <h2 class="title">Coming soon</h2>
+        <div class="muted2" id="placeholderText">Data is not ready yet.</div>
+      </section>
+    </div>
+
+    <!-- Headlines -->
+    <section class="card">
+      <h2 class="title">
+        Headlines <span id="newsLoading" style="font-weight:800;">Loading</span>
+      </h2>
+      <div id="newsList" style="margin-top:6px;"></div>
+      <div id="newsStatus" class="muted-xs"></div>
+    </section>
+  </div>
+
+  <!-- ✅ tabbar 제거됨: 하단 메뉴는 nav-bottom.js가 주입 -->
+
+  <!-- ✅ 공통 상/하단 네비 주입 -->
+  <script src="/nav-top.js"></script>
+  <script src="/nav-bottom.js"></script>
+
+  <!-- swipe navigation -->
+  <script src="./swipe-nav.js"></script>
+
+  <!-- App logic -->
+  <script src="/now.app.js" defer></script>
+</body>
+</html>

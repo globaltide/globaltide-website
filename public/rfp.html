@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>RFP | GlobalTide</title>
+  <script defer src="/nav-top.js"></script>
+  <script defer src="/nav-bottom.js"></script>
+
+  <style>
+    body{margin:0;font-family:-apple-system;background:#0b1020;color:#e5e7eb}
+    main{max-width:1100px;margin:0 auto;padding:24px 14px;
+      padding-top:calc(var(--gt-topnav-h,56px)+20px);
+      padding-bottom:calc(var(--gt-bottomnav-h,64px)+20px)}
+    .card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+      border-radius:14px;padding:14px;margin-top:14px}
+    h1{font-size:22px}
+    h2{font-size:16px;margin-top:20px}
+    li{margin:6px 0}
+    a{color:#93c5fd}
+  </style>
+
+  <script>
+    fetch("/.netlify/functions/rfp")
+      .then(r=>r.json())
+      .then(d=>{
+        const dom = d.domestic.map(x =>
+          `<li><b>${x.institution}</b> – ${x.asset} (${x.region}) / 마감 ${x.deadline}
+           <a href="${x.source}" target="_blank">원문</a></li>`
+        ).join("");
+        const glo = d.global.map(x =>
+          `<li><b>${x.institution}</b> – ${x.asset} (${x.region}) / 마감 ${x.deadline}
+           <a href="${x.source}" target="_blank">원문</a></li>`
+        ).join("");
+        document.getElementById("dom").innerHTML = dom;
+        document.getElementById("glo").innerHTML = glo;
+      });
+  </script>
+</head>
+<body>
+<main>
+  <h1>RFP Monitor</h1>
+
+  <div class="card">
+    <h2>국내 기관</h2>
+    <ul id="dom"></ul>
+  </div>
+
+  <div class="card">
+    <h2>글로벌 연기금</h2>
+    <ul id="glo"></ul>
+  </div>
+</main>
+</body>
+</html>

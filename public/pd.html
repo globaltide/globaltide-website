@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <title>Private Debt | GlobalTide</title>
+  <script defer src="/nav-top.js"></script>
+  <script defer src="/nav-bottom.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="module">
+    import { renderLineChart } from "/js/charts.js";
+    import { filterByLP } from "/js/render-table.js";
+
+    const lp = "Insurance"; // 🔥 나중에 셀렉트 박스로 바꾸면 됨
+
+    fetch("/.netlify/functions/pd")
+      .then(r => r.json())
+      .then(data => {
+        const strategies = filterByLP(data.strategies, lp);
+
+        strategies.forEach((s, i) => {
+          const id = "chart_" + i;
+          document.getElementById("charts").insertAdjacentHTML(
+            "beforeend",
+            `<h3>${s.strategy}</h3><canvas id="${id}"></canvas>
+             <p>Deals (12M): ${s.deals12m}</p>`
+          );
+          renderLineChart(id, "Spread (bp)", s.spreadHistory);
+        });
+
+        document.getElementById("sec").innerHTML =
+          data.secFilings.map(f =>
+            `<li>${f.fund} – ${f.form} (${f.date})</li>`
+          ).join("");
+      });
+  </script>
+</head>
+
+<body>
+<main>
+  <h1>Private Debt Market</h1>
+
+  <section id="charts"></section>
+
+  <h2>SEC Filings</h2>
+  <ul id="sec"></ul>
+</main>
+</body>
+</html>

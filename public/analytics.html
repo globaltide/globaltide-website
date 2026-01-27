@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GlobalTide · Analytics</title>
+  <style>
+    :root {
+      --border:#e5e7eb;
+      --bg:#f9fafb;
+    }
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      font-family:"Pretendard","Noto Sans KR",system-ui,-apple-system,sans-serif;
+      background:var(--bg);
+      color:#111;
+    }
+    header{
+      padding:12px 20px;
+      background:#fff;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      position:sticky;
+      top:0;
+      z-index:10;
+    }
+    .logo{
+      font-weight:700;
+      font-size:16px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      text-decoration:none;
+      color:#111;
+    }
+    header h1{
+      margin:0;
+      font-size:18px;
+      font-weight:700;
+    }
+    header .muted{
+      font-size:13px;
+      color:#555;
+    }
+
+    main{
+      max-width:1000px;
+      margin:20px auto 40px;
+      padding:0 14px 40px;
+    }
+
+    .card{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:14px 18px 16px;
+      margin-bottom:16px;
+      box-shadow:0 1px 4px rgba(0,0,0,0.05);
+    }
+    .card-title{
+      font-size:16px;
+      font-weight:700;
+      margin:0 0 6px;
+    }
+    .card-sub{
+      font-size:12px;
+      color:#666;
+      margin-bottom:10px;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:14px;
+    }
+    th, td{
+      padding:8px 10px;
+      border-top:1px solid var(--border);
+    }
+    th{
+      text-align:left;
+      background:#f3f4f6;
+      font-weight:600;
+    }
+    td.num{
+      text-align:right;
+      font-variant-numeric:tabular-nums;
+    }
+    tfoot td{
+      background:#f9fafb;
+      font-weight:600;
+    }
+
+    .muted-xs{
+      font-size:12px;
+      color:#666;
+      margin-top:6px;
+    }
+
+    @media (max-width:600px){
+      th,td{ padding:6px 6px; }
+      main{ padding:0 8px 32px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">Global Tide</a>
+  <h1>Analytics</h1>
+  <div class="muted">페이지뷰 · 방문자 · 브라우저</div>
+</header>
+
+<main>
+
+  <!-- 페이지별 -->
+  <section class="card">
+    <h2 class="card-title">페이지별 방문 수</h2>
+    <div class="card-sub">Supabase 로그 기준 집계입니다.</div>
+    <table id="table-paths">
+      <thead>
+        <tr>
+          <th>페이지 경로</th>
+          <th class="num">페이지뷰</th>
+          <th class="num">방문자수</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr>
+          <td>합계</td>
+          <td class="num" id="paths-total-pageviews">0</td>
+          <td class="num" id="paths-total-visitors">0</td>
+        </tr>
+      </tfoot>
+    </table>
+    <div class="muted-xs" id="paths-summary"></div>
+  </section>
+
+  <!-- 브라우저별 -->
+  <section class="card">
+    <h2 class="card-title">브라우저 통계</h2>
+    <div class="card-sub">user-agent 를 간단히 파싱한 결과입니다.</div>
+    <table id="table-browsers">
+      <thead>
+        <tr>
+          <th>브라우저</th>
+          <th class="num">페이지뷰</th>
+          <th class="num">방문자수</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr>
+          <td>합계</td>
+          <td class="num" id="browser-total-pageviews">0</td>
+          <td class="num" id="browser-total-visitors">0</td>
+        </tr>
+      </tfoot>
+    </table>
+    <div class="muted-xs" id="browser-summary"></div>
+  </section>
+
+  <!-- 일자별 추이 -->
+  <section class="card">
+    <h2 class="card-title">일자별 방문 추이</h2>
+    <div class="card-sub">최근 30일 페이지뷰 / 방문자수입니다.</div>
+    <table id="table-days">
+      <thead>
+        <tr>
+          <th>날짜</th>
+          <th class="num">페이지뷰</th>
+          <th class="num">방문자수</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div class="muted-xs" id="days-summary"></div>
+  </section>
+
+</main>
+
+<script>
+async function loadStats() {
+  try {
+    const res = await fetch("/.netlify/functions/stats");
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const stats = await res.json();
+
+    renderPaths(stats.by_path || {});
+    renderBrowsers(stats.by_browser || {});
+    renderDays(stats.by_day || {});
+  } catch (e) {
+    console.error("Stats load error:", e);
+    alert("통계를 불러오지 못했습니다.");
+  }
+}
+
+function renderPaths(byPath) {
+  const tbody = document.querySelector("#table-paths tbody");
+  tbody.innerHTML = "";
+
+  const entries = Object.entries(byPath);
+  // 페이지뷰 순으로 정렬 (내림차순)
+  entries.sort((a, b) => (b[1].pageviews || 0) - (a[1].pageviews || 0));
+
+  let totalPv = 0;
+  let totalUv = 0;
+
+  for (const [path, v] of entries) {
+    const tr = document.createElement("tr");
+
+    const tdPath = document.createElement("td");
+    tdPath.textContent = path;
+    tr.appendChild(tdPath);
+
+    const tdPv = document.createElement("td");
+    tdPv.className = "num";
+    tdPv.textContent = v.pageviews ?? 0;
+    tr.appendChild(tdPv);
+
+    const tdUv = document.createElement("td");
+    tdUv.className = "num";
+    tdUv.textContent = v.visitors ?? 0;
+    tr.appendChild(tdUv);
+
+    tbody.appendChild(tr);
+
+    totalPv += v.pageviews || 0;
+    totalUv += v.visitors || 0;
+  }
+
+  document.getElementById("paths-total-pageviews").textContent = totalPv;
+  document.getElementById("paths-total-visitors").textContent = totalUv;
+  document.getElementById("paths-summary").textContent =
+    `총 ${entries.length}개 페이지 경로`;
+}
+
+function renderBrowsers(byBrowser) {
+  const tbody = document.querySelector("#table-browsers tbody");
+  tbody.innerHTML = "";
+
+  const entries = Object.entries(byBrowser);
+  entries.sort((a, b) => (b[1].pageviews || 0) - (a[1].pageviews || 0));
+
+  let totalPv = 0;
+  let totalUv = 0;
+
+  for (const [name, v] of entries) {
+    const tr = document.createElement("tr");
+
+    const tdName = document.createElement("td");
+    tdName.textContent = name;
+    tr.appendChild(tdName);
+
+    const tdPv = document.createElement("td");
+    tdPv.className = "num";
+    tdPv.textContent = v.pageviews ?? 0;
+    tr.appendChild(tdPv);
+
+    const tdUv = document.createElement("td");
+    tdUv.className = "num";
+    tdUv.textContent = v.visitors ?? 0;
+    tr.appendChild(tdUv);
+
+    tbody.appendChild(tr);
+
+    totalPv += v.pageviews || 0;
+    totalUv += v.visitors || 0;
+  }
+
+  document.getElementById("browser-total-pageviews").textContent = totalPv;
+  document.getElementById("browser-total-visitors").textContent = totalUv;
+  document.getElementById("browser-summary").textContent =
+    `총 ${entries.length}개 브라우저 유형`;
+}
+
+function renderDays(byDay) {
+  const tbody = document.querySelector("#table-days tbody");
+  tbody.innerHTML = "";
+
+  const entries = Object.entries(byDay);
+  // 날짜 오름차순
+  entries.sort((a, b) => a[0].localeCompare(b[0]));
+
+  let totalDays = entries.length;
+
+  for (const [day, v] of entries) {
+    const tr = document.createElement("tr");
+
+    const tdDay = document.createElement("td");
+    tdDay.textContent = day;
+    tr.appendChild(tdDay);
+
+    const tdPv = document.createElement("td");
+    tdPv.className = "num";
+    tdPv.textContent = v.pageviews ?? 0;
+    tr.appendChild(tdPv);
+
+    const tdUv = document.createElement("td");
+    tdUv.className = "num";
+    tdUv.textContent = v.visitors ?? 0;
+    tr.appendChild(tdUv);
+
+    tbody.appendChild(tr);
+  }
+
+  document.getElementById("days-summary").textContent =
+    `총 ${totalDays}일 데이터 (최근 30일 기준)`;
+}
+
+loadStats();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Global Tide — 투자자 및 마켓 News</title>
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+
+<style>
+:root { --border:#e5e7eb; }
+
+/* ------------------------------------ */
+/* 기본 폰트 */
+body {
+  margin:0;
+  font-family:"Pretendard","Noto Sans KR",system-ui,-apple-system,sans-serif;
+  background:#f9fafb;
+  color:#111;
+}
+
+/* ------------------------------------ */
+/* HEADER */
+header {
+  padding:10px 14px;
+  background:#fff;
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:10;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.logo a{
+  padding:5px 10px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  font-weight:700;
+  color:#111;text-decoration:none;
+}
+header h1{font-size:16px;font-weight:700;margin:0;}
+header .count{font-size:13px;color:#666}
+
+/* ------------------------------------ */
+/* CONTENT */
+.content{padding:12px;}
+.tablewrap{
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  width:100%;
+}
+
+/* ------------------------------------ */
+/* TABLE */
+.sheet-table{
+  border-collapse:collapse;
+  background:#fff;
+  width:auto;
+  min-width:100%;
+  border:1px solid var(--border);
+  border-radius:8px;
+}
+
+/* ------- 줄간격: 최초 대비 약 2/3 수준 ------- */
+.sheet-table th,
+.sheet-table td {
+  padding:4px 8px;              /* 최초 6px → 4px (2/3 수준) */
+  height:24px;                  /* 자연스러운 컴팩트 줄높이 */
+  line-height:1.27;             /* 최초 1.45 대비 ~2/3 */
+  font-size:15px;               /* 제목 포함 기본 15px 유지 */
+  border-bottom:1px solid var(--border);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* HEADER ROW */
+.sheet-table th{
+  background:#f3f4f6;
+  font-size:13px;
+  padding:4px 8px;
+  line-height:1.2;              /* 살짝 컴팩트 */
+  font-weight:600;
+}
+
+/* ------------------------------------ */
+/* 1열 = 제목 (폰트 그대로, 줄간격만 조정) */
+.has-three-cols td:nth-child(1) {
+  width:75vw !important;
+  min-width:75vw !important;
+  max-width:75vw !important;
+
+  font-size:15px;
+  line-height:1.27;             /* 제목도 자연스럽게 압축 */
+
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+}
+.has-three-cols td:nth-child(1) a{
+  display:inline-block;
+  max-width:100%;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* ------------------------------------ */
+/* 2열 = 날짜 */
+.has-three-cols td:nth-child(2) {
+  width:70px;
+  text-align:right;
+  padding-right:6px;
+
+  font-size:13px;
+  line-height:1.2;              /* 날짜/구분은 더 컴팩트하게 */
+  letter-spacing:0.2px;
+  color:#555;
+}
+
+/* ------------------------------------ */
+/* 3열 = 구분 (최대한 좁게) */
+.has-three-cols td:nth-child(3){
+  width:50px !important;
+  min-width:40px !important;
+  max-width:50px !important;
+
+  text-align:center;
+  font-size:13px;
+  line-height:1.2;
+  color:#555;
+
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+
+/* ------------------------------------ */
+/* COLGROUP */
+.has-three-cols col:nth-child(1){width:75%;}
+.has-three-cols col:nth-child(2){width:15%;}
+.has-three-cols col:nth-child(3){width:10%;}
+
+/* ------------------------------------ */
+/* TAB BAR */
+.tabbar{
+  position:fixed;bottom:0;left:0;right:0;
+  background:#fff;border-top:1px solid var(--border);
+  display:flex;gap:6px;padding:8px;justify-content:center;
+}
+.tabbar a{
+  text-decoration:none;padding:6px 14px;
+  border:1px solid var(--border);border-radius:10px;
+  background:#f9fafb;color:#111;font-size:14px;
+}
+.tabbar a.active{background:#111;color:#fff;border-color:#111;}
+
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo"><a href="/">Global Tide</a></div>
+  <h1>투자자 및 마켓 News</h1>
+  <span class="count" id="rowcount"></span>
+</header>
+
+<div class="content">
+  <div id="table-wrap" class="tablewrap"></div>
+</div>
+
+<div class="tabbar">
+    <a href="news.html" class="page-link">투자자 및 마켓 News</a>
+    <a href="pd.html" class="page-link">Private Debt Live</a>
+</div>
+
+<script>
+const DEFAULT_SRC =
+ "https://toppqscjkkmmelpngzda.supabase.co/storage/v1/object/public/globaltide/news_report_250501-251031_web.xlsx";
+
+const params=new URLSearchParams(location.search);
+const FILE_URL=params.get("src")||DEFAULT_SRC;
+const SHEET_NAME=params.get("sheet")||null;
+
+const wrap=document.getElementById("table-wrap");
+
+/* LOAD EXCEL */
+async function loadExcel(url){
+  wrap.innerHTML="<p>불러오는 중…</p>";
+
+  try{
+    const res=await fetch(url+(url.includes("?")?"&":"?")+"v="+Date.now());
+    const buf=await res.arrayBuffer();
+    const wb=XLSX.read(buf,{type:"array"});
+
+    const wsName=
+      SHEET_NAME && wb.SheetNames.includes(SHEET_NAME)
+      ? SHEET_NAME
+      : wb.SheetNames[0];
+
+    const sheet=wb.Sheets[wsName];
+
+    /* <br> 제거 */
+    let html=XLSX.utils.sheet_to_html(sheet,{id:"news-table"});
+    html=html.replace(/<br\s*\/?>/gi," ").replace(/\r?\n/g," ");
+
+    wrap.innerHTML=`<div class="tablewrap">${html}</div>`;
+
+    const table=document.getElementById("news-table");
+    table.classList.add("sheet-table","has-three-cols");
+
+  }catch(e){
+    wrap.innerHTML=`<div class="error">불러오기 오류<br>${e}</div>`;
+  }
+}
+
+loadExcel(FILE_URL);
+
+
+fetch("/.netlify/functions/track", { method: "POST" });
+</script>
+
+
+</body>
+</html>

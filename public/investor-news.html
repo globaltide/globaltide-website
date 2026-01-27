@@ -1,0 +1,741 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Investor News | GlobalTide</title>
+
+  <!-- your repo layout: /public/nav-top.js, /public/nav-bottom.js -->
+  <script defer src="/nav-top.js"></script>
+  <script defer src="/nav-bottom.js"></script>
+
+  <style>
+    :root{
+      --bg0:#070a12;
+      --bg1:#0b1020;
+      --panel:rgba(255,255,255,.06);
+      --panel2:rgba(255,255,255,.04);
+      --card:rgba(0,0,0,.20);
+      --line:rgba(255,255,255,.10);
+
+      --txt:#e7eaf3;
+      --muted:#a6b0c3;
+
+      --chip:rgba(255,255,255,.08);
+      --chip2:rgba(255,255,255,.12);
+
+      --ok:#22c55e;
+      --warn:#f59e0b;
+      --bad:#ef4444;
+
+      --radius:14px;
+      --shadow: 0 12px 34px rgba(0,0,0,.45);
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, -apple-system, system-ui, Segoe UI, Roboto, Helvetica, Arial, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+
+      /* nav injectors will override */
+      --gt-topnav-h: 56px;
+      --gt-bottomnav-h: 64px;
+    }
+
+    html,body{height:100%}
+    body{
+      margin:0;
+      color:var(--txt);
+      font-family:var(--sans);
+      background:
+        radial-gradient(1200px 700px at 18% -8%, rgba(34,197,94,.14), transparent 52%),
+        radial-gradient(900px 600px at 85% 8%, rgba(59,130,246,.12), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1) 55%, #070a12);
+    }
+
+    .wrap{
+      max-width:1100px;
+      margin:0 auto;
+      padding:18px 14px 30px;
+      padding-top: calc(var(--gt-topnav-h, 56px) + 18px);
+      padding-bottom: calc(var(--gt-bottomnav-h, 64px) + 22px);
+    }
+
+    .hero{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:14px;
+      margin-bottom:14px;
+    }
+    .hero h1{
+      margin:0;
+      font-size:22px;
+      letter-spacing:-.2px;
+    }
+    .hero .sub{
+      margin-top:6px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.45;
+      max-width:820px;
+    }
+
+    .panel{
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    .topbar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      padding:12px;
+      border-bottom:1px solid var(--line);
+      background: rgba(0,0,0,.16);
+    }
+
+    .status{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:7px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color:var(--txt);
+    }
+    .dot{
+      width:8px;height:8px;border-radius:50%;
+      background:#94a3b8;
+      box-shadow:0 0 0 3px rgba(148,163,184,.14);
+    }
+    .dot.ok{ background:var(--ok); box-shadow:0 0 0 3px rgba(34,197,94,.18); }
+    .dot.warn{ background:var(--warn); box-shadow:0 0 0 3px rgba(245,158,11,.18); }
+    .dot.bad{ background:var(--bad); box-shadow:0 0 0 3px rgba(239,68,68,.18); }
+
+    .controls{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      padding:12px;
+      border-bottom:1px solid var(--line);
+      background: rgba(0,0,0,.10);
+    }
+
+    .group{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .label{ font-size:12px; color:var(--muted); }
+
+    .chips{ display:flex; gap:6px; flex-wrap:wrap; }
+
+    .chip{
+      appearance:none;
+      border:1px solid var(--line);
+      background: var(--chip);
+      color:var(--txt);
+      padding:7px 10px;
+      border-radius: 999px;
+      font-size:12px;
+      cursor:pointer;
+      user-select:none;
+      transition: background .15s ease, border-color .15s ease, transform .04s ease;
+    }
+    .chip:hover{ background: var(--chip2); }
+    .chip:active{ transform: translateY(1px); }
+    .chip.on{
+      border-color: rgba(34,197,94,.55);
+      background: rgba(34,197,94,.16);
+    }
+
+    .searchRow{
+      flex:1 1 260px;
+      min-width:240px;
+      display:flex;
+      gap:8px;
+      align-items:center;
+      justify-content:flex-end;
+    }
+    .search{
+      width:min(460px, 100%);
+      display:flex;
+      gap:8px;
+      align-items:center;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.18);
+    }
+    .search input{
+      width:100%;
+      border:none;
+      outline:none;
+      background:transparent;
+      color:var(--txt);
+      font-size:13px;
+    }
+
+    .btn{
+      appearance:none;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color:var(--txt);
+      padding:8px 10px;
+      border-radius: 10px;
+      font-size:12px;
+      cursor:pointer;
+    }
+    .btn:hover{ background: rgba(255,255,255,.10); }
+    .btn:active{ transform: translateY(1px); }
+
+    .sections{
+      padding:12px;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:14px;
+    }
+
+    .section{
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(0,0,0,.16);
+      overflow:hidden;
+    }
+    .sectionHead{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:12px;
+      border-bottom:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+    }
+    .sectionHead h2{
+      margin:0;
+      font-size:14px;
+      letter-spacing:-.15px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .sectionHead small{ color:var(--muted); font-weight:500; }
+
+    .item{
+      padding:12px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+    }
+    .item:last-child{ border-bottom:none; }
+
+    .kicker{
+      width: 160px;
+      flex: 0 0 160px;
+      color: var(--muted);
+      font-size:12px;
+      line-height:1.5;
+    }
+    .kicker .tagpill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:5px 8px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      color: var(--txt);
+      font-size:12px;
+      margin-bottom:6px;
+    }
+    .kicker .tagpill.rfp{
+      border-color: rgba(245,158,11,.55);
+      background: rgba(245,158,11,.14);
+    }
+    .kicker .meta{
+      font-family: var(--mono);
+      font-size:11px;
+      opacity:.95;
+    }
+
+    .main{ flex: 1 1 auto; min-width:0; }
+    .title{
+      margin:0 0 6px;
+      font-size:14px;
+      line-height:1.35;
+      letter-spacing:-.1px;
+    }
+    .title a{ color:var(--txt); text-decoration:none; }
+    .title a:hover{ text-decoration:underline; }
+
+    .subline{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px 10px;
+      align-items:center;
+      color: var(--muted);
+      font-size:12px;
+    }
+    .tag{
+      display:inline-flex;
+      align-items:center;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      color: var(--txt);
+      font-size:12px;
+    }
+    .tag.dim{ color:var(--muted); }
+
+    .empty{
+      padding:16px 12px;
+      color: var(--muted);
+      font-size:13px;
+      line-height:1.5;
+    }
+
+    @media (max-width: 780px){
+      .item{ flex-direction:column; }
+      .kicker{ width:auto; flex:none; }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="wrap">
+    <div class="hero">
+      <div>
+        <h1>Investor News</h1>
+        <div class="sub">
+          한국과 글로벌 기관 투자자 동향을 자동 수집. 투자 집행, 운용사/기관 소식, 실적, RFP까지 한 화면에서.
+        </div>
+      </div>
+    </div>
+
+    <section class="panel">
+      <div class="topbar">
+        <div class="status">
+          <span class="pill" id="pillState"><span class="dot warn" id="dotState"></span><span id="txtState">loading</span></span>
+          <span class="pill"><span class="dot"></span><span>last</span><span style="color:var(--muted)" id="txtUpdated">-</span></span>
+          <span class="pill"><span class="dot"></span><span>items</span><span style="color:var(--muted)" id="txtTotal">0</span></span>
+          <span class="pill"><span class="dot warn"></span><span>RFP</span><span style="color:var(--muted)" id="txtRfp">0</span></span>
+        </div>
+
+        <div class="status">
+          <button class="btn" id="btnRefresh">새로고침</button>
+          <button class="btn" id="btnReset">필터 초기화</button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="group">
+          <div class="label">지역</div>
+          <div class="chips" id="chipRegion"></div>
+        </div>
+
+        <div class="group">
+          <div class="label">타입</div>
+          <div class="chips" id="chipType"></div>
+        </div>
+
+        <div class="group">
+          <div class="label">기관</div>
+          <div class="chips" id="chipInst"></div>
+        </div>
+
+        <div class="group">
+          <div class="label">자산군</div>
+          <div class="chips" id="chipAsset"></div>
+        </div>
+
+        <div class="searchRow">
+          <div class="search">
+            <span style="color:#94a3b8;font-size:12px">검색</span>
+            <input id="q" placeholder="기관명, 키워드, 매체, 제목" autocomplete="off" />
+          </div>
+        </div>
+      </div>
+
+      <div class="sections" id="sections"></div>
+    </section>
+  </main>
+
+  <script>
+    ;(() => {
+      const CFG = {
+        api: "/.netlify/functions/investor-news",
+        refreshMs: 5 * 60 * 1000, // 5 minutes
+        region: [
+          { id: "all", label: "All" },
+          { id: "korea", label: "Korea" },
+          { id: "global", label: "Global" }
+        ],
+        type: [
+          { id: "all", label: "All" },
+          { id: "deploy", label: "투자 집행" },
+          { id: "news", label: "소식" },
+          { id: "perf", label: "실적" },
+          { id: "rfp", label: "RFP" }
+        ],
+        inst: [
+          { id: "all", label: "All" },
+          { id: "bank", label: "은행" },
+          { id: "central", label: "중앙회" },
+          { id: "mutual", label: "공제회" },
+          { id: "pension", label: "연기금" },
+          { id: "insurance", label: "보험사" },
+          { id: "capital", label: "캐피탈" },
+          { id: "swf", label: "SWF" },
+          { id: "endowment", label: "Endowment" }
+        ],
+        asset: [
+          { id: "all", label: "All" },
+          { id: "pd", label: "PD" },
+          { id: "re", label: "RE" },
+          { id: "pe", label: "PE" },
+          { id: "vc", label: "VC" },
+          { id: "infra", label: "Infra" },
+          { id: "coin", label: "Coin" }
+        ],
+        sections: [
+          { id: "kr_deploy", title: "한국 투자자 투자 집행", region: "korea", type: "deploy" },
+          { id: "kr_news",   title: "한국 투자자 소식",       region: "korea", type: "news"   },
+          { id: "gl_deploy", title: "글로벌 투자자 투자 집행", region: "global", type: "deploy" },
+          { id: "gl_news",   title: "글로벌 투자자 뉴스",      region: "global", type: "news"   },
+          { id: "gl_perf",   title: "글로벌 투자자 실적",      region: "global", type: "perf"   },
+          { id: "rfp_all",   title: "RFP",                    region: "all",    type: "rfp"    }
+        ]
+      };
+
+      const state = {
+        region:"all", type:"all", inst:"all", asset:"all", q:"",
+        data: [],
+        updatedAt: null
+      };
+
+      const el = {
+        chipRegion: document.getElementById("chipRegion"),
+        chipType: document.getElementById("chipType"),
+        chipInst: document.getElementById("chipInst"),
+        chipAsset: document.getElementById("chipAsset"),
+        q: document.getElementById("q"),
+        sections: document.getElementById("sections"),
+        btnRefresh: document.getElementById("btnRefresh"),
+        btnReset: document.getElementById("btnReset"),
+
+        dotState: document.getElementById("dotState"),
+        txtState: document.getElementById("txtState"),
+        txtUpdated: document.getElementById("txtUpdated"),
+        txtTotal: document.getElementById("txtTotal"),
+        txtRfp: document.getElementById("txtRfp")
+      };
+
+      const norm = (s) => (s||"").toString().trim();
+      const low = (s) => norm(s).toLowerCase();
+
+      function setState(kind, msg){
+        el.txtState.textContent = msg;
+        el.dotState.className = "dot " + (kind || "");
+      }
+
+      function parseDate(s){
+        const t = norm(s);
+        const m = t.match(/(\d{4})-(\d{2})-(\d{2})/);
+        if (m){
+          const d = new Date(+m[1], +m[2]-1, +m[3]);
+          return Number.isNaN(d.getTime()) ? null : d;
+        }
+        const d2 = new Date(t);
+        return Number.isNaN(d2.getTime()) ? null : d2;
+      }
+
+      function fmtKST(d){
+        try{
+          return new Intl.DateTimeFormat("ko-KR", {
+            timeZone: "Asia/Seoul",
+            year: "numeric", month: "2-digit", day: "2-digit",
+            hour: "2-digit", minute: "2-digit"
+          }).format(d);
+        }catch(e){
+          return d.toLocaleString();
+        }
+      }
+
+      function buildChips(container, defs, key){
+        container.innerHTML = "";
+        defs.forEach(def => {
+          const b = document.createElement("button");
+          b.className = "chip" + (state[key] === def.id ? " on" : "");
+          b.textContent = def.label;
+          b.addEventListener("click", () => {
+            state[key] = def.id;
+            syncChips();
+            render();
+            writeHash();
+          });
+          container.appendChild(b);
+        });
+      }
+
+      function syncChips(){
+        buildChips(el.chipRegion, CFG.region, "region");
+        buildChips(el.chipType, CFG.type, "type");
+        buildChips(el.chipInst, CFG.inst, "inst");
+        buildChips(el.chipAsset, CFG.asset, "asset");
+      }
+
+      function applyFilters(items){
+        const q = low(state.q);
+        return items.filter(it => {
+          if (state.region !== "all" && it.region !== state.region) return false;
+
+          if (state.type !== "all"){
+            if (state.type === "rfp"){
+              if (!it.rfp) return false;
+            } else {
+              if (it.type !== state.type) return false;
+            }
+          }
+
+          if (state.inst !== "all" && it.inst !== state.inst) return false;
+          if (state.asset !== "all" && it.asset !== state.asset) return false;
+
+          if (q){
+            const hay = low([it.title,it.source,it.instLabel,it.assetLabel,it.regionLabel,it.typeLabel,it.date,it.body].filter(Boolean).join(" "));
+            if (!hay.includes(q)) return false;
+          }
+          return true;
+        });
+      }
+
+      function groupForSection(items, sec){
+        let out = items.slice();
+        if (sec.region !== "all") out = out.filter(x => x.region === sec.region);
+        if (sec.type === "rfp") out = out.filter(x => x.rfp);
+        else out = out.filter(x => x.type === sec.type);
+
+        out = applyFilters(out);
+
+        out.sort((a,b)=>{
+          const ta = parseDate(a.date)?.getTime() || 0;
+          const tb = parseDate(b.date)?.getTime() || 0;
+          return tb - ta;
+        });
+
+        return out;
+      }
+
+      function sectionEmptyHint(sec){
+        if (sec.id === "rfp_all") return "RFP 관련 키워드가 포함된 항목만 표시됩니다.";
+        return "필터 조건에 맞는 항목이 없습니다.";
+      }
+
+      function renderItem(it){
+        const row = document.createElement("div");
+        row.className = "item";
+
+        const kicker = document.createElement("div");
+        kicker.className = "kicker";
+
+        const pill = document.createElement("div");
+        pill.className = "tagpill" + (it.rfp ? " rfp" : "");
+        pill.textContent = it.rfp ? "RFP" : (it.typeLabel || "News");
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        meta.innerHTML = `
+          <div>${it.regionLabel || ""} · ${it.instLabel || ""}</div>
+          <div>${it.assetLabel || ""}</div>
+          <div>${norm(it.date) || ""}</div>
+        `.trim();
+
+        kicker.appendChild(pill);
+        kicker.appendChild(meta);
+
+        const main = document.createElement("div");
+        main.className = "main";
+
+        const h = document.createElement("h3");
+        h.className = "title";
+        const a = document.createElement("a");
+        a.href = it.url || "#";
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = it.title || "(untitled)";
+        h.appendChild(a);
+
+        const sub = document.createElement("div");
+        sub.className = "subline";
+
+        const t1 = document.createElement("span");
+        t1.className = "tag";
+        t1.textContent = it.source || "source";
+
+        const t2 = document.createElement("span");
+        t2.className = "tag dim";
+        t2.textContent = (it.typeLabel || "") + ((it.typeLabel && it.assetLabel) ? " · " : "") + (it.assetLabel || "");
+
+        const t3 = document.createElement("span");
+        t3.className = "tag dim";
+        t3.textContent = it.instLabel || "";
+
+        sub.appendChild(t1);
+        if (t2.textContent.trim()) sub.appendChild(t2);
+        if (t3.textContent.trim()) sub.appendChild(t3);
+
+        main.appendChild(h);
+        main.appendChild(sub);
+
+        row.appendChild(kicker);
+        row.appendChild(main);
+        return row;
+      }
+
+      function render(){
+        const all = state.data.slice();
+        const filtered = applyFilters(all);
+        const rfpCount = all.filter(x => x.rfp).length;
+
+        el.txtTotal.textContent = String(all.length);
+        el.txtRfp.textContent = String(rfpCount);
+
+        el.sections.innerHTML = "";
+
+        CFG.sections.forEach(sec => {
+          const items = groupForSection(all, sec);
+
+          const box = document.createElement("div");
+          box.className = "section";
+
+          const head = document.createElement("div");
+          head.className = "sectionHead";
+
+          const title = document.createElement("h2");
+          title.innerHTML = `${sec.title} <small>${items.length}</small>`;
+          head.appendChild(title);
+          box.appendChild(head);
+
+          if (!items.length){
+            const em = document.createElement("div");
+            em.className = "empty";
+            em.textContent = sectionEmptyHint(sec);
+            box.appendChild(em);
+          } else {
+            items.forEach(it => box.appendChild(renderItem(it)));
+          }
+
+          el.sections.appendChild(box);
+        });
+
+        // shown count = filtered across all types; quick update in state pill
+        const shown = filtered.length;
+        el.txtShown = shown;
+      }
+
+      function reset(){
+        state.region="all";
+        state.type="all";
+        state.inst="all";
+        state.asset="all";
+        state.q="";
+        el.q.value="";
+        syncChips();
+        render();
+        writeHash();
+      }
+
+      function readHash(){
+        const h = (location.hash || "").replace(/^#/, "");
+        if (!h) return;
+        const kv = {};
+        h.split("&").forEach(p=>{
+          const [k,v] = p.split("=");
+          if (k) kv[decodeURIComponent(k)] = decodeURIComponent(v || "");
+        });
+        if (kv.region) state.region = kv.region;
+        if (kv.type) state.type = kv.type;
+        if (kv.inst) state.inst = kv.inst;
+        if (kv.asset) state.asset = kv.asset;
+        if (kv.q){
+          state.q = kv.q;
+          el.q.value = kv.q;
+        }
+      }
+
+      function writeHash(){
+        const kv = { region:state.region, type:state.type, inst:state.inst, asset:state.asset, q:state.q };
+        const s = Object.keys(kv)
+          .filter(k => kv[k] && kv[k] !== "all")
+          .map(k => encodeURIComponent(k) + "=" + encodeURIComponent(kv[k]))
+          .join("&");
+        history.replaceState(null, "", s ? ("#" + s) : " ");
+      }
+
+      async function loadOnce(){
+        setState("warn", "loading");
+
+        const u = CFG.api + "?t=" + Date.now();
+        const r = await fetch(u, { cache: "no-store" });
+        if (!r.ok) throw new Error("api error " + r.status);
+
+        const j = await r.json();
+        if (!j || !Array.isArray(j.items)) throw new Error("bad payload");
+
+        state.data = j.items;
+        state.updatedAt = j.updatedAt ? new Date(j.updatedAt) : new Date();
+
+        el.txtUpdated.textContent = fmtKST(state.updatedAt);
+
+        setState("ok", "live");
+        render();
+      }
+
+      async function refresh(){
+        try{
+          await loadOnce();
+        }catch(e){
+          setState("bad", "failed");
+          // keep old data
+        }
+      }
+
+      function initEvents(){
+        el.q.addEventListener("input", () => {
+          state.q = el.q.value || "";
+          render();
+          writeHash();
+        });
+
+        el.btnReset.addEventListener("click", reset);
+        el.btnRefresh.addEventListener("click", refresh);
+
+        window.addEventListener("hashchange", () => {
+          readHash();
+          syncChips();
+          render();
+        });
+      }
+
+      function boot(){
+        readHash();
+        syncChips();
+        initEvents();
+        refresh();
+        setInterval(refresh, CFG.refreshMs);
+      }
+
+      boot();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>Private Equity | GlobalTide</title>
+  <script defer src="/nav-top.js"></script>
+  <script defer src="/nav-bottom.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body{margin:0;font-family:-apple-system;background:#0b1020;color:#e5e7eb}
+    main{max-width:1100px;margin:0 auto;padding:24px 14px;
+      padding-top:calc(var(--gt-topnav-h,56px)+20px);
+      padding-bottom:calc(var(--gt-bottomnav-h,64px)+20px)}
+    .card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+      border-radius:14px;padding:14px;margin-top:14px}
+  </style>
+
+  <script>
+    fetch("/.netlify/functions/pe")
+      .then(r=>r.json())
+      .then(d=>{
+        d.strategies.forEach((s,i)=>{
+          const id="pe"+i;
+          document.getElementById("charts").insertAdjacentHTML("beforeend",
+            `<div class="card"><h3>${s.strategy}</h3>
+             <canvas id="${id}"></canvas>
+             <p>Industries: ${s.industries.join(", ")}</p></div>`
+          );
+          new Chart(document.getElementById(id),{
+            type:"line",
+            data:{labels:s.irrHistory.map(x=>x.date),
+              datasets:[{label:"Net IRR %",data:s.irrHistory.map(x=>x.value)}]}
+          });
+        });
+
+        document.getElementById("sec").innerHTML =
+          d.secFilings.map(f=>`<li>${f.fund} – ${f.form} (${f.date})</li>`).join("");
+      });
+  </script>
+</head>
+<body>
+<main>
+  <h1>Private Equity Market</h1>
+  <section id="charts"></section>
+
+  <div class="card">
+    <h2>SEC Filings</h2>
+    <ul id="sec"></ul>
+  </div>
+</main>
+</body>
+</html>

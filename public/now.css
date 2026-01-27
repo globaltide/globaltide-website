@@ -1,0 +1,97 @@
+:root{ --border:#e5e7eb; --bg:#f9fafb; --muted:#666; }
+body{ margin:0; font-family:"Pretendard","Noto Sans KR",system-ui,-apple-system,sans-serif; background:var(--bg); color:#111; }
+
+/* ✅ header 제거됨: 상단 메뉴는 nav-top.js가 주입 */
+
+/* ✅ toolbar는 상단 nav 높이를 자동으로 따라감 */
+.toolbar{
+  background:#fff;
+  border-bottom:1px solid var(--border);
+  padding:10px 12px;
+  position:sticky;
+  top: var(--gt-topnav-h, 56px);
+  z-index:15;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.seg{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.btn{ border:1px solid var(--border); background:#f9fafb; padding:8px 12px; border-radius:999px; cursor:pointer;
+  font-weight:700; font-size:14px; color:#111; user-select:none; }
+.btn.active{ background:#111; color:#fff; border-color:#111; }
+.select{ border:1px solid var(--border); background:#fff; padding:8px 10px; border-radius:12px; font-weight:700; font-size:14px; color:#111; min-width:180px; }
+
+.wrap{ padding-bottom:80px; }
+.card{ background:#fff; border:1px solid var(--border); border-radius:12px; padding:14px; margin:12px;
+  box-shadow:0 1px 4px rgba(0,0,0,0.05); }
+.title{ font-weight:800; font-size:18px; margin:0 0 10px; }
+.muted2{ color:var(--muted); font-size:13px; }
+.bold-loading{ font-weight:800; color:#111; font-size:22px; }
+.muted-xs{ font-size:12px; color:#666; white-space:nowrap; }
+
+.row{ display:flex; flex-direction:row; justify-content:space-between; align-items:flex-start; gap:12px; width:100%; }
+.row > div{ flex:1; min-width:0; }
+.swap-sub{ font-size:12px; color:#444; margin-top:2px; white-space:nowrap; }
+
+table{ width:100%; border-collapse:collapse; font-size:13px; }
+th, td{ border-bottom:1px solid var(--border); padding:10px 8px; text-align:right; white-space:nowrap; }
+th:first-child, td:first-child{ text-align:left; }
+thead th{ font-size:12px; color:#555; background:#fafafa; position:sticky; top:0; z-index:1; }
+.table-wrap{ border:1px solid var(--border); border-radius:12px; overflow:auto; max-height:520px; }
+
+.chart-wrap{ width:100%; height:520px; border:1px solid var(--border); border-radius:14px; overflow:hidden; background:#fff; position:relative; }
+#chartCanvas{ width:100%; height:100%; display:block; }
+.chart-legend{ display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; font-size:13px; color:#333; user-select:none; }
+.chart-legend .item{ display:inline-flex; align-items:center; gap:6px; cursor:pointer; padding:6px 10px; border:1px solid var(--border); border-radius:999px; background:#fff; }
+.chart-legend .item.off{ opacity:0.45; text-decoration:line-through; }
+.chart-legend .dot{ width:10px; height:10px; border-radius:999px; display:inline-block; }
+
+.tooltip{ position:absolute; pointer-events:none; background:rgba(17,17,17,0.92); color:#fff; padding:10px 12px; border-radius:12px;
+  font-size:12px; line-height:1.45; min-width:160px; box-shadow:0 10px 30px rgba(0,0,0,0.25); transform:translate(-50%, -110%); display:none; white-space:nowrap; }
+.tooltip .tdate{ font-weight:800; margin-bottom:6px; display:block; }
+.tooltip .line{ display:flex; justify-content:space-between; gap:12px; }
+.tooltip .k{ opacity:0.85; }
+.tooltip .v{ font-weight:800; }
+
+.hidden{ display:none !important; }
+#newsList a{ color:#0a66c2; text-decoration:none; }
+#newsList a:hover{ text-decoration:underline; }
+
+/* ✅ tabbar 제거됨: 하단 메뉴는 nav-bottom.js가 주입 */
+
+/* =====================
+   ✅ Mobile: Market / Private Debt / Select 한 줄 고정
+===================== */
+@media (max-width: 520px){
+  .toolbar{
+    flex-wrap:wrap; /* rangeSeg는 아래로 내려가도 OK */
+  }
+
+  /* catSeg(왼쪽)는 한 줄 고정 */
+  #catSeg{
+    flex-wrap:nowrap;
+    width:100%;
+    gap:6px;
+  }
+
+  /* 버튼을 조금 컴팩트하게 */
+  #catSeg .btn{
+    padding:7px 9px;
+    font-size:13px;
+  }
+
+  /* Select가 너무 커서 줄바꿈 유발 -> 최소폭 줄이기 */
+  #catSeg .select{
+    min-width:110px;
+    max-width:140px;
+    padding:7px 8px;
+    font-size:13px;
+  }
+
+  #swipe-root { height: 100%; }
+
+  /* 버튼 텍스트가 길면 깨질 수 있으니 줄바꿈 방지 */
+  #catSeg .btn{ white-space:nowrap; }
+}

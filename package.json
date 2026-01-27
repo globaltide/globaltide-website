@@ -1,0 +1,15 @@
+{
+  "name": "globaltide-site",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GlobalTide Netlify site with analytics functions",
+  "scripts": {
+    "build": "echo 'No build step needed'",
+    "start": "netlify dev"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "fast-xml-parser": "^4.5.3",
+    "node-fetch": "^3.3.2"
+  }
+}

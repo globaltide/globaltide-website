@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Global Tide</title>
+
+  <style>
+    body{
+      margin:0;
+      font-family:"Pretendard","Noto Sans KR",system-ui,-apple-system,sans-serif;
+      color:#111;
+      background:#f9fafb;
+      height:100vh;
+      overflow:hidden;
+      position:relative;
+    }
+
+    /* 광고 텍스트 (우측 상단 고정) */
+    .ad-text{
+      position:absolute;
+      top:16px;
+      right:16px;
+      font-size:14px;
+      color:#111;
+      text-decoration:none;
+      white-space:nowrap;
+      font-weight:500;
+      z-index:10;
+    }
+    .ad-text:hover{
+      text-decoration:underline;
+    }
+
+    /* 중앙 콘텐츠 */
+    .center-wrap{
+      position:absolute;
+      top:50%;
+      left:50%;
+      transform:translate(-50%, -50%);
+      text-align:center;
+      width:100%;
+      max-width:420px;
+      padding:0 20px;
+      box-sizing:border-box;
+    }
+
+    h1{
+      font-size:32px;
+      margin:0 0 32px;
+      font-weight:800;
+    }
+    h1 a{
+      color:#111;
+      text-decoration:none;
+      transition:.2s;
+    }
+    h1 a:hover{
+      color:#0a66c2;
+    }
+
+    .links{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr)); /* Board · Now · Search 한 줄 */
+      gap:16px;
+      width:100%;
+      margin-bottom:32px;
+    }
+
+    a.page-link{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#fff;
+      border:1px solid #e5e7eb;
+      padding:20px 16px;
+      border-radius:14px;
+      text-align:center;
+      font-size:15px;
+      font-weight:600;
+      text-decoration:none;
+      color:#111;
+      transition:.2s ease;
+      box-shadow:0 2px 6px rgba(0,0,0,0.05);
+    }
+    a.page-link:hover{
+      background:#111;
+      color:#fff;
+      border-color:#111;
+      transform:translateY(-2px);
+      box-shadow:0 8px 20px rgba(0,0,0,0.15);
+    }
+
+    footer{
+      font-size:13px;
+      color:#6b7280;
+      margin-top:20px;
+    }
+
+    #swipe-root { height: 100%; }
+
+  </style>
+</head>
+<body>
+
+  <!-- 광고 텍스트 -->
+  <a href="https://product.kyobobook.co.kr/detail/S000218331336"
+     target="_blank"
+     class="ad-text">
+    [AD] 물어보기 부끄러워 묻지 못한 비트코인
+  </a>
+
+  <!-- 메인 콘텐츠 -->
+  <div class="center-wrap">
+
+    <h1><a href="/">Global Tide</a></h1>
+
+    <div class="links">
+      <a href="board.html" class="page-link">
+        Board
+      </a>
+      <a href="now.html" class="page-link">
+        Now
+      </a>
+      <a href="search.html" class="page-link">
+        Search
+      </a>
+    </div>
+
+    <footer>© 2025 Global Tide — 대체투자 정보의 모든 것</footer>
+
+  </div>
+
+
+<script src="./swipe-nav.js"></script>
+
+
+  <!-- 방문 기록 저장 -->
+  <script>
+  (function(){
+    let log = JSON.parse(localStorage.getItem("gt_visits") || "[]");
+    log.push({
+      path: location.pathname,
+      ts: Date.now(),
+      ua: navigator.userAgent
+    });
+    if (log.length > 100) log = log.slice(-100);
+    localStorage.setItem("gt_visits", JSON.stringify(log));
+  })();
+  </script>
+
+
+</body>
+</html>
