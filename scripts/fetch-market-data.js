@@ -72,6 +72,16 @@ async function fetchUSDKRW() {
   }
 }
 
+// 데이터가 비어있는지 확인하는 함수
+function needsUpdate(existing) {
+  if (!existing) return true;
+  
+  // usdkrw_spot, us_10y, sofr_30d 중 하나라도 null이면 업데이트 필요
+  return existing.usdkrw_spot === null || 
+         existing.us_10y === null || 
+         existing.sofr_30d === null;
+}
+
 // 메인 데이터 수집 함수
 async function collectMarketData() {
   console.log('🔄 시장 데이터 수집 시작...');
@@ -114,9 +124,14 @@ async function collectMarketData() {
   // 먼저 오늘 날짜의 데이터가 있는지 확인
   const { data: existing, error: checkError } = await supabase
     .from('market_snapshots_fred_daily')
-    .select('snapshot_date')
+    .select('*')
     .eq('snapshot_date', today)
     .single();
+  
+  if (existing && !needsUpdate(existing)) {
+    console.log('✅ 데이터가 이미 완전합니다. 업데이트 불필요.');
+    return true;
+  }
   
   if (existing) {
     // 업데이트
@@ -155,20 +170,26 @@ async function backfillData() {
   const startDate = new Date('2024-12-20');
   const today = new Date();
   
+  let processed = 0;
+  let updated = 0;
+  let skipped = 0;
+  
   for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
     const dateStr = formatDate(d);
-    console.log(`\n📅 ${dateStr} 데이터 수집 중...`);
+    console.log(`\n📅 ${dateStr} 데이터 처리 중...`);
     
-    // 주말 건너뛰기 (선택사항)
+    // 주말 건너뛰기
     const dayOfWeek = d.getDay();
     if (dayOfWeek === 0 || dayOfWeek === 6) {
       console.log('⏭️  주말이므로 건너뜁니다.');
+      skipped++;
       continue;
     }
     
     // 각 날짜의 데이터 수집
     const threeDaysBefore = formatDate(new Date(d.getTime() - 3 * 24 * 60 * 60 * 1000));
     
+    console.log('  📊 데이터 수집 중...');
     const usdkrw = await fetchUSDKRW();
     const us10y = await fetchFredData('DGS10', threeDaysBefore, dateStr);
     const sofr30d = await fetchFredData('SOFR30DAYAVG', threeDaysBefore, dateStr);
@@ -183,33 +204,58 @@ async function backfillData() {
       created_at: new Date().toISOString()
     };
     
+    console.log(`  📦 수집: USD/KRW=${usdkrw}, US10Y=${us10y}, SOFR=${sofr30d}`);
+    
     // 기존 데이터 확인
     const { data: existing } = await supabase
       .from('market_snapshots_fred_daily')
-      .select('snapshot_date')
+      .select('*')
       .eq('snapshot_date', dateStr)
       .single();
     
-    if (existing) {
-      console.log(`⏭️  ${dateStr} 데이터가 이미 존재합니다.`);
+    if (existing && !needsUpdate(existing)) {
+      console.log(`  ✅ ${dateStr} 데이터가 이미 완전합니다.`);
+      skipped++;
       continue;
     }
     
-    // 데이터 삽입
-    const { error } = await supabase
-      .from('market_snapshots_fred_daily')
-      .insert([marketData]);
-    
-    if (error) {
-      console.error(`❌ ${dateStr} 데이터 삽입 실패:`, error);
+    if (existing) {
+      // 업데이트
+      console.log(`  🔄 ${dateStr} 데이터 업데이트 중...`);
+      const { error } = await supabase
+        .from('market_snapshots_fred_daily')
+        .update(marketData)
+        .eq('snapshot_date', dateStr);
+      
+      if (error) {
+        console.error(`  ❌ ${dateStr} 데이터 업데이트 실패:`, error);
+      } else {
+        console.log(`  ✅ ${dateStr} 데이터 업데이트 완료!`);
+        updated++;
+      }
     } else {
-      console.log(`✅ ${dateStr} 데이터 삽입 완료!`);
+      // 데이터 삽입
+      console.log(`  ➕ ${dateStr} 새 데이터 삽입 중...`);
+      const { error } = await supabase
+        .from('market_snapshots_fred_daily')
+        .insert([marketData]);
+      
+      if (error) {
+        console.error(`  ❌ ${dateStr} 데이터 삽입 실패:`, error);
+      } else {
+        console.log(`  ✅ ${dateStr} 데이터 삽입 완료!`);
+        processed++;
+      }
     }
     
     // API 레이트 리밋 방지를 위한 대기
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
   
+  console.log('\n📊 완료 요약:');
+  console.log(`  ➕ 새로 삽입: ${processed}건`);
+  console.log(`  🔄 업데이트: ${updated}건`);
+  console.log(`  ⏭️  건너뜀: ${skipped}건`);
   console.log('\n✅ 과거 데이터 채우기 완료!');
 }
 
