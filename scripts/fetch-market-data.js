@@ -51,7 +51,7 @@ async function fetchFredData(seriesId, startDate, endDate) {
   }
 }
 
-// 한국은행 API에서 USD/KRW 가져오기 (대체: exchangerate-api.com 무료 API)
+// USD/KRW 환율 가져오기
 async function fetchUSDKRW() {
   try {
     // exchangerate-api.com의 무료 API 사용
@@ -76,9 +76,10 @@ async function fetchUSDKRW() {
 function needsUpdate(existing) {
   if (!existing) return true;
   
-  // usdkrw_spot, us_10y, sofr_30d 중 하나라도 null이면 업데이트 필요
+  // 주요 필드 중 하나라도 null이면 업데이트 필요
   return existing.usdkrw_spot === null || 
          existing.us_10y === null || 
+         existing.us_1y === null ||
          existing.sofr_30d === null;
 }
 
@@ -97,19 +98,24 @@ async function collectMarketData() {
   console.log('📊 US 10Y 데이터 수집 중...');
   const us10y = await fetchFredData('DGS10', thirtyDaysAgo, today);
   
-  // 3. SOFR 30-day Average (SOFR30DAYAVG)
+  // 3. US 1Y Treasury (DGS1)
+  console.log('📊 US 1Y 데이터 수집 중...');
+  const us1y = await fetchFredData('DGS1', thirtyDaysAgo, today);
+  
+  // 4. SOFR 30-day Average (SOFR30DAYAVG)
   console.log('📊 SOFR 30d 데이터 수집 중...');
   const sofr30d = await fetchFredData('SOFR30DAYAVG', thirtyDaysAgo, today);
   
-  // 4. Korea 10Y (임시로 null, 한국은행 API 연동 필요)
+  // 5. Korea 10Y (임시로 null, 한국은행 API 연동 필요)
   console.log('⚠️  Korea 10Y 데이터는 수동 입력이 필요합니다.');
   const kor10y = null;
   
-  // 데이터 객체 생성 (created_at 제거)
+  // 데이터 객체 생성
   const marketData = {
     snapshot_date: today,
     usdkrw_spot: usdkrw,
     us_10y: us10y,
+    us_1y: us1y,
     sofr_30d: sofr30d,
     kor_10y: kor10y,
     source_type: 'auto_script'
@@ -191,19 +197,21 @@ async function backfillData() {
     console.log('  📊 데이터 수집 중...');
     const usdkrw = await fetchUSDKRW();
     const us10y = await fetchFredData('DGS10', threeDaysBefore, dateStr);
+    const us1y = await fetchFredData('DGS1', threeDaysBefore, dateStr);
     const sofr30d = await fetchFredData('SOFR30DAYAVG', threeDaysBefore, dateStr);
     
-    // 데이터 객체 생성 (created_at 제거)
+    // 데이터 객체 생성
     const marketData = {
       snapshot_date: dateStr,
       usdkrw_spot: usdkrw,
       us_10y: us10y,
+      us_1y: us1y,
       sofr_30d: sofr30d,
       kor_10y: null,
       source_type: 'backfill_script'
     };
     
-    console.log(`  📦 수집: USD/KRW=${usdkrw}, US10Y=${us10y}, SOFR=${sofr30d}`);
+    console.log(`  📦 수집: USD/KRW=${usdkrw}, US10Y=${us10y}, US1Y=${us1y}, SOFR=${sofr30d}`);
     
     // 기존 데이터 확인
     const { data: existing } = await supabase
