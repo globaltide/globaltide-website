@@ -5,6 +5,15 @@ on:
   schedule:
     - cron: '0 0 * * *'  # 매일 UTC 0시 (한국 시간 오전 9시)
   workflow_dispatch:  # 수동 실행 가능
+    inputs:
+      mode:
+        description: 'Mode (daily or backfill)'
+        required: true
+        default: 'daily'
+        type: choice
+        options:
+          - daily
+          - backfill
 
 jobs:
   collect-data:
@@ -27,7 +36,14 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
-        run: node scripts/fetch-market-data.js daily
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            MODE="${{ inputs.mode }}"
+          else
+            MODE="daily"
+          fi
+          echo "Running in $MODE mode"
+          node scripts/fetch-market-data.js $MODE
       
       - name: Notify on failure
         if: failure()
