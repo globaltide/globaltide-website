@@ -24,6 +24,41 @@
     .btn.excel:hover{
       filter: brightness(1.05);
     }
+    
+    /* 추천 키워드 스타일 */
+    .suggested-keywords {
+      margin: 16px 0;
+      padding: 16px;
+      background: rgba(59, 130, 246, 0.05);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 12px;
+    }
+    .suggested-keywords-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #60a5fa;
+      margin-bottom: 10px;
+    }
+    .suggested-keywords-list {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .suggested-keyword-chip {
+      padding: 6px 14px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 20px;
+      font-size: 13px;
+      color: #60a5fa;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .suggested-keyword-chip:hover {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.5);
+      transform: translateY(-1px);
+    }
   </style>
 </head>
 
@@ -47,6 +82,16 @@
         <div class="searchbar">
           <input id="qInput" type="text" placeholder="검색어 입력 (예: Private Debt)" />
           <button class="btn" id="btnSearch">검색</button>
+        </div>
+
+        <!-- 추천 키워드 섹션 -->
+        <div class="suggested-keywords">
+          <div class="suggested-keywords-title">💡 추천 키워드</div>
+          <div class="suggested-keywords-list">
+            <div class="suggested-keyword-chip" data-keywords="default rate,private debt crisis">
+              default rate + private debt crisis
+            </div>
+          </div>
         </div>
 
         <div class="kw-panel" id="kwPanel" style="display:none;">
@@ -82,5 +127,22 @@
 
   <!-- search 로직 -->
   <script type="module" src="/js/search/main.js"></script>
+  
+  <!-- 추천 키워드 클릭 이벤트 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 추천 키워드 클릭 이벤트
+      document.querySelectorAll('.suggested-keyword-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const keywords = chip.dataset.keywords;
+          const input = document.getElementById('qInput');
+          input.value = keywords;
+          
+          // 검색 버튼 클릭
+          document.getElementById('btnSearch').click();
+        });
+      });
+    });
+  </script>
 </body>
 </html>
