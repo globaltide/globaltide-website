@@ -70,6 +70,13 @@
     }
     .btn:disabled{ opacity:0.6; cursor:not-allowed; }
 
+    /* ✅ 버튼 그룹 */
+    .btn-group{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
     .tabs{
       display:flex;
       gap:10px;
@@ -328,8 +335,9 @@
         <div>
           <div class="section-title">키워드</div>
         </div>
-        <div>
-          <button class="btn" id="btnKeywordManage">내 키워드 관리</button>
+        <div class="btn-group">
+          <button class="btn secondary" id="btnWrite">✏️ 글쓰기</button>
+          <button class="btn" id="btnKeywordManage">🔍 내 키워드 관리</button>
         </div>
       </div>
 
@@ -554,6 +562,20 @@
 
       currentTab = btn.dataset.tab;
       await loadPosts();
+    });
+
+    // ===== 글쓰기 버튼 =====
+    document.getElementById('btnWrite').addEventListener('click', async () => {
+      await loadSession();
+      
+      if (!currentUser) {
+        showToast('로그인이 필요합니다');
+        openLoginModal();
+        return;
+      }
+      
+      // write.html 페이지로 이동
+      window.location.href = 'write.html';
     });
 
     // ===== Login Modal =====
