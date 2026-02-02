@@ -9,7 +9,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
-console.error(‘❌ SUPABASE_URL 또는 SUPABASE_KEY 환경 변수가 설정되지 않았습니다.’);
+console.error(‘ERROR: SUPABASE_URL or SUPABASE_KEY not set’);
 process.exit(1);
 }
 
@@ -40,7 +40,7 @@ return `${year}${month}${day}`;
 // FRED API에서 데이터 가져오기
 async function fetchFredData(seriesId, startDate, endDate) {
 if (!FRED_API_KEY) {
-console.warn(`⚠️  FRED_API_KEY가 없어 ${seriesId} 데이터를 건너뜁니다.`);
+console.warn(`WARNING: FRED_API_KEY not set, skipping ${seriesId}`);
 return null;
 }
 
@@ -60,7 +60,7 @@ return null;
 ```
 
 } catch (error) {
-console.error(`❌ ${seriesId} 데이터 가져오기 실패:`, error.message);
+console.error(`ERROR fetching ${seriesId}:`, error.message);
 return null;
 }
 }
@@ -76,7 +76,7 @@ const startDate = formatBokDate(startDateObj);
 ```
 const url = `https://ecos.bok.or.kr/api/StatisticSearch/${BOK_API_KEY}/json/kr/1/10/817Y002/D/${startDate}/${endDate}/010210000`;
 
-console.log(`  🇰🇷 한국은행 API 호출: ${startDate} ~ ${endDate}`);
+console.log(`  [BOK API] ${startDate} ~ ${endDate}`);
 
 const response = await fetch(url);
 const data = await response.json();
@@ -85,16 +85,16 @@ if (data?.StatisticSearch?.row && data.StatisticSearch.row.length > 0) {
   // 가장 최근 데이터
   const latest = data.StatisticSearch.row[data.StatisticSearch.row.length - 1];
   const value = parseFloat(latest.DATA_VALUE);
-  console.log(`  ✅ Korea 10Y: ${value}% (날짜: ${latest.TIME})`);
+  console.log(`  [SUCCESS] Korea 10Y: ${value}% (date: ${latest.TIME})`);
   return value;
 }
 
-console.log('  ⚠️  한국은행 API에서 데이터를 찾을 수 없습니다.');
+console.log('  [WARNING] No data from BOK API');
 return null;
 ```
 
 } catch (error) {
-console.error(’  ❌ Korea 10Y 데이터 가져오기 실패:’, error.message);
+console.error(’  [ERROR] Korea 10Y fetch failed:’, error.message);
 return null;
 }
 }
@@ -118,7 +118,7 @@ return await fetchFredData('DEXKOUS', thirtyDaysAgo, today);
 ```
 
 } catch (error) {
-console.error(‘❌ USD/KRW 데이터 가져오기 실패:’, error.message);
+console.error(‘ERROR fetching USD/KRW:’, error.message);
 return null;
 }
 }
@@ -137,30 +137,30 @@ existing.kor_10y === null;
 
 // 메인 데이터 수집 함수
 async function collectMarketData() {
-console.log(‘🔄 시장 데이터 수집 시작…’);
+console.log(’[START] Collecting market data…’);
 
 const today = new Date();
 const todayStr = formatDate(today);
 const thirtyDaysAgo = formatDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
 
 // 1. USD/KRW
-console.log(‘📊 USD/KRW 데이터 수집 중…’);
+console.log(’[1/5] Fetching USD/KRW…’);
 const usdkrw = await fetchUSDKRW();
 
 // 2. US 10Y Treasury (DGS10)
-console.log(‘📊 US 10Y 데이터 수집 중…’);
+console.log(’[2/5] Fetching US 10Y…’);
 const us10y = await fetchFredData(‘DGS10’, thirtyDaysAgo, todayStr);
 
 // 3. US 1Y Treasury (DGS1)
-console.log(‘📊 US 1Y 데이터 수집 중…’);
+console.log(’[3/5] Fetching US 1Y…’);
 const us1y = await fetchFredData(‘DGS1’, thirtyDaysAgo, todayStr);
 
 // 4. SOFR 30-day Average (SOFR30DAYAVG)
-console.log(‘📊 SOFR 30d 데이터 수집 중…’);
+console.log(’[4/5] Fetching SOFR 30d…’);
 const sofr30d = await fetchFredData(‘SOFR30DAYAVG’, thirtyDaysAgo, todayStr);
 
 // 5. Korea 10Y (한국은행 API)
-console.log(‘📊 Korea 10Y 데이터 수집 중…’);
+console.log(’[5/5] Fetching Korea 10Y…’);
 const kor10y = await fetchKoreaYield(today);
 
 // 데이터 객체 생성
@@ -174,10 +174,10 @@ kor_10y: kor10y,
 source_type: ‘auto_script’
 };
 
-console.log(‘📦 수집된 데이터:’, marketData);
+console.log(’[DATA]’, marketData);
 
 // Supabase에 저장
-console.log(‘💾 Supabase에 데이터 저장 중…’);
+console.log(’[SAVE] Saving to Supabase…’);
 
 // 먼저 오늘 날짜의 데이터가 있는지 확인
 const { data: existing, error: checkError } = await supabase
@@ -187,13 +187,13 @@ const { data: existing, error: checkError } = await supabase
 .single();
 
 if (existing && !needsUpdate(existing)) {
-console.log(‘✅ 데이터가 이미 완전합니다. 업데이트 불필요.’);
+console.log(’[SKIP] Data already complete’);
 return true;
 }
 
 if (existing) {
 // 업데이트
-console.log(‘🔄 기존 데이터 업데이트 중…’);
+console.log(’[UPDATE] Updating existing data…’);
 const { error: updateError } = await supabase
 .from(‘market_snapshots_fred_daily’)
 .update(marketData)
@@ -201,25 +201,25 @@ const { error: updateError } = await supabase
 
 ```
 if (updateError) {
-  console.error('❌ 데이터 업데이트 실패:', updateError);
+  console.error('[ERROR] Update failed:', updateError);
   return false;
 }
-console.log('✅ 데이터 업데이트 완료!');
+console.log('[SUCCESS] Data updated!');
 ```
 
 } else {
 // 새로 삽입
-console.log(‘➕ 새 데이터 삽입 중…’);
+console.log(’[INSERT] Inserting new data…’);
 const { error: insertError } = await supabase
 .from(‘market_snapshots_fred_daily’)
 .insert([marketData]);
 
 ```
 if (insertError) {
-  console.error('❌ 데이터 삽입 실패:', insertError);
+  console.error('[ERROR] Insert failed:', insertError);
   return false;
 }
-console.log('✅ 데이터 삽입 완료!');
+console.log('[SUCCESS] Data inserted!');
 ```
 
 }
@@ -229,7 +229,7 @@ return true;
 
 // 과거 데이터 채우기 함수 (12월 20일 ~ 현재)
 async function backfillData() {
-console.log(‘🔙 과거 데이터 채우기 시작…’);
+console.log(’[BACKFILL] Starting backfill…’);
 
 const startDate = new Date(‘2024-12-20’);
 const today = new Date();
@@ -240,13 +240,13 @@ let skipped = 0;
 
 for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
 const dateStr = formatDate(d);
-console.log(`\n📅 ${dateStr} 데이터 처리 중...`);
+console.log(`\n[DATE] ${dateStr}`);
 
 ```
 // 주말 건너뛰기
 const dayOfWeek = d.getDay();
 if (dayOfWeek === 0 || dayOfWeek === 6) {
-  console.log('⏭️  주말이므로 건너뜁니다.');
+  console.log('  [SKIP] Weekend');
   skipped++;
   continue;
 }
@@ -254,7 +254,7 @@ if (dayOfWeek === 0 || dayOfWeek === 6) {
 // 각 날짜의 데이터 수집
 const threeDaysBefore = formatDate(new Date(d.getTime() - 3 * 24 * 60 * 60 * 1000));
 
-console.log('  📊 데이터 수집 중...');
+console.log('  [FETCH] Collecting data...');
 const usdkrw = await fetchUSDKRW();
 const us10y = await fetchFredData('DGS10', threeDaysBefore, dateStr);
 const us1y = await fetchFredData('DGS1', threeDaysBefore, dateStr);
@@ -272,7 +272,7 @@ const marketData = {
   source_type: 'backfill_script'
 };
 
-console.log(`  📦 수집: USD/KRW=${usdkrw}, US10Y=${us10y}, US1Y=${us1y}, SOFR=${sofr30d}, KOR10Y=${kor10y}`);
+console.log(`  [DATA] USD/KRW=${usdkrw}, US10Y=${us10y}, US1Y=${us1y}, SOFR=${sofr30d}, KOR10Y=${kor10y}`);
 
 // 기존 데이터 확인
 const { data: existing } = await supabase
@@ -282,36 +282,36 @@ const { data: existing } = await supabase
   .single();
 
 if (existing && !needsUpdate(existing)) {
-  console.log(`  ✅ ${dateStr} 데이터가 이미 완전합니다.`);
+  console.log(`  [SKIP] Data already complete`);
   skipped++;
   continue;
 }
 
 if (existing) {
   // 업데이트
-  console.log(`  🔄 ${dateStr} 데이터 업데이트 중...`);
+  console.log(`  [UPDATE] Updating...`);
   const { error } = await supabase
     .from('market_snapshots_fred_daily')
     .update(marketData)
     .eq('snapshot_date', dateStr);
   
   if (error) {
-    console.error(`  ❌ ${dateStr} 데이터 업데이트 실패:`, error);
+    console.error(`  [ERROR] Update failed:`, error);
   } else {
-    console.log(`  ✅ ${dateStr} 데이터 업데이트 완료!`);
+    console.log(`  [SUCCESS] Updated!`);
     updated++;
   }
 } else {
   // 데이터 삽입
-  console.log(`  ➕ ${dateStr} 새 데이터 삽입 중...`);
+  console.log(`  [INSERT] Inserting...`);
   const { error } = await supabase
     .from('market_snapshots_fred_daily')
     .insert([marketData]);
   
   if (error) {
-    console.error(`  ❌ ${dateStr} 데이터 삽입 실패:`, error);
+    console.error(`  [ERROR] Insert failed:`, error);
   } else {
-    console.log(`  ✅ ${dateStr} 데이터 삽입 완료!`);
+    console.log(`  [SUCCESS] Inserted!`);
     processed++;
   }
 }
@@ -322,11 +322,11 @@ await new Promise(resolve => setTimeout(resolve, 1000));
 
 }
 
-console.log(’\n📊 완료 요약:’);
-console.log(`  ➕ 새로 삽입: ${processed}건`);
-console.log(`  🔄 업데이트: ${updated}건`);
-console.log(`  ⏭️  건너뜀: ${skipped}건`);
-console.log(’\n✅ 과거 데이터 채우기 완료!’);
+console.log(’\n[SUMMARY]’);
+console.log(`  New inserts: ${processed}`);
+console.log(`  Updates: ${updated}`);
+console.log(`  Skipped: ${skipped}`);
+console.log(’\n[DONE] Backfill complete!’);
 }
 
 // 스크립트 실행
@@ -336,26 +336,26 @@ const mode = args[0] || ‘daily’;
 if (mode === ‘backfill’) {
 backfillData()
 .then(() => {
-console.log(’\n🎉 과거 데이터 채우기 성공!’);
+console.log(’\n[SUCCESS] Backfill completed successfully!’);
 process.exit(0);
 })
 .catch(error => {
-console.error(’\n❌ 과거 데이터 채우기 실패:’, error);
+console.error(’\n[ERROR] Backfill failed:’, error);
 process.exit(1);
 });
 } else {
 collectMarketData()
 .then(success => {
 if (success) {
-console.log(’\n🎉 데이터 수집 성공!’);
+console.log(’\n[SUCCESS] Data collection completed!’);
 process.exit(0);
 } else {
-console.error(’\n❌ 데이터 수집 실패’);
+console.error(’\n[ERROR] Data collection failed’);
 process.exit(1);
 }
 })
 .catch(error => {
-console.error(’\n❌ 데이터 수집 중 오류:’, error);
+console.error(’\n[ERROR] Data collection error:’, error);
 process.exit(1);
 });
 }
