@@ -3,51 +3,646 @@
 <head>
   <meta charset="utf-8" />
   <title>Private Equity | GlobalTide</title>
+
   <script defer src="/nav-top.js"></script>
   <script defer src="/nav-bottom.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    body{margin:0;font-family:-apple-system;background:#0b1020;color:#e5e7eb}
-    main{max-width:1100px;margin:0 auto;padding:24px 14px;
-      padding-top:calc(var(--gt-topnav-h,56px)+20px);
-      padding-bottom:calc(var(--gt-bottomnav-h,64px)+20px)}
-    .card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
-      border-radius:14px;padding:14px;margin-top:14px}
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #0b1020;
+      color: #e5e7eb;
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 14px;
+      padding-top: calc(var(--gt-topnav-h, 56px) + 20px);
+      padding-bottom: calc(var(--gt-bottomnav-h, 64px) + 20px);
+    }
+
+    h1 {
+      color: #fff;
+      font-size: 2rem;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, .05);
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 14px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+
+    .section-title {
+      color: #fff;
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+    }
+
+    .chart-description {
+      color: #9ca3af;
+      line-height: 1.6;
+      margin-bottom: 15px;
+      padding: 12px;
+      background: rgba(255, 255, 255, .03);
+      border-radius: 8px;
+      border-left: 3px solid #6366f1;
+      font-size: 0.95rem;
+    }
+
+    .metric-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 10px 0 15px 0;
+    }
+
+    .metric-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    .subtle-badge {
+      display: inline-block;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      color: #e5e7eb;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin: 10px 0 10px 0;
+    }
+
+    select {
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .14);
+      color: #e5e7eb;
+      padding: 10px 12px;
+      border-radius: 10px;
+      outline: none;
+      font-size: 0.95rem;
+      max-width: 100%;
+    }
+
+    option {
+      background: #0b1020;
+      color: #e5e7eb;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      height: 280px;
+      margin-top: 12px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 30px;
+      color: #9ca3af;
+      font-size: 1rem;
+    }
+
+    .error {
+      color: #ef4444;
+      padding: 15px;
+      background: rgba(239, 68, 68, 0.1);
+      border-radius: 8px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .item {
+      grid-column: span 6;
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 12px;
+      background: rgba(255,255,255,.02);
+      transition: all .2s ease;
+    }
+
+    .item:hover {
+      background: rgba(255,255,255,.05);
+      border-color: rgba(99, 102, 241, 0.7);
+      transform: translateY(-1px);
+    }
+
+    .item-title {
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.05rem;
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+
+    .item-meta {
+      color: #9ca3af;
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+    }
+
+    .item-box {
+      color: #cbd5e1;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .divider {
+      height: 1px;
+      background: rgba(255,255,255,.10);
+      margin: 14px 0;
+    }
+
+    .filings-header {
+      color: #fff;
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+      border-bottom: 2px solid rgba(99, 102, 241, 0.5);
+      padding-bottom: 10px;
+    }
+
+    .filing-item {
+      padding: 12px;
+      margin-bottom: 8px;
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      background: rgba(255, 255, 255, .02);
+    }
+
+    .filing-item:hover {
+      background: rgba(255, 255, 255, .05);
+      border-color: #6366f1;
+      transform: translateX(3px);
+    }
+
+    .filing-fund {
+      font-weight: 700;
+      color: #fff;
+      font-size: 1rem;
+      margin-bottom: 5px;
+    }
+
+    .filing-details {
+      color: #9ca3af;
+      font-size: 0.85rem;
+      margin-bottom: 5px;
+    }
+
+    .filing-link {
+      color: #6366f1;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .filing-link:hover {
+      color: #8b5cf6;
+      text-decoration: underline;
+    }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 1.6rem; }
+      .chart-wrapper { height: 240px; }
+      .card { padding: 15px; }
+      .item { grid-column: span 12; }
+    }
   </style>
-
-  <script>
-    fetch("/.netlify/functions/pe")
-      .then(r=>r.json())
-      .then(d=>{
-        d.strategies.forEach((s,i)=>{
-          const id="pe"+i;
-          document.getElementById("charts").insertAdjacentHTML("beforeend",
-            `<div class="card"><h3>${s.strategy}</h3>
-             <canvas id="${id}"></canvas>
-             <p>Industries: ${s.industries.join(", ")}</p></div>`
-          );
-          new Chart(document.getElementById(id),{
-            type:"line",
-            data:{labels:s.irrHistory.map(x=>x.date),
-              datasets:[{label:"Net IRR %",data:s.irrHistory.map(x=>x.value)}]}
-          });
-        });
-
-        document.getElementById("sec").innerHTML =
-          d.secFilings.map(f=>`<li>${f.fund} – ${f.form} (${f.date})</li>`).join("");
-      });
-  </script>
 </head>
+
 <body>
 <main>
   <h1>Private Equity Market</h1>
-  <section id="charts"></section>
 
+  <!-- Market Overview + Chart -->
   <div class="card">
-    <h2>SEC Filings</h2>
-    <ul id="sec"></ul>
+    <h2 class="section-title">Private Equity Market Overview</h2>
+
+    <div class="chart-description">
+      <strong>이 페이지의 의미:</strong>
+      Private Equity는 비상장 기업(또는 사업부)을 인수/투자한 뒤, 운영 개선(마진/성장/현금흐름)과 밸류에이션(멀티플) 변화를 통해
+      수익을 만드는 전략입니다. 아래 차트는 전략별 Net IRR 흐름을 보여주고, 전략들이 집중하는 산업(Industries)을 요약합니다.
+    </div>
+
+    <div class="metric-row" id="metricRow">
+      <span class="metric-badge">Loading...</span>
+    </div>
+
+    <div class="chart-description" id="metricMeaning" style="display:none;">
+      <strong>지표 해석:</strong>
+      평균 Net IRR은 각 전략의 최신(가장 최근 날짜) 값을 기준으로 계산합니다.
+      “상승/하락”은 동일 전략의 최근 구간 변화(초기값 대비 최신값)를 단순 비교한 방향성입니다.
+      (데이터 포인트 수가 적거나 누락되면 해당 전략은 집계에서 제외될 수 있습니다.)
+    </div>
+
+    <div class="controls">
+      <span style="color:#9ca3af;font-size:0.95rem;">차트 전략 선택</span>
+      <select id="strategySelect" aria-label="strategy select">
+        <option>Loading...</option>
+      </select>
+      <span id="selectedMeta" class="subtle-badge" style="display:none;"></span>
+    </div>
+
+    <div class="chart-wrapper">
+      <canvas id="irrChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Key Industries / Themes -->
+  <div class="card">
+    <h2 class="section-title">Key Industries</h2>
+    <div class="chart-description">
+      <strong>최근 산업 집중 요약:</strong>
+      전략별 Industries를 합산하여 “여러 전략에서 반복되는 섹터”를 보여줍니다.
+      빈도가 높을수록, 시장에서 공통적으로 선호(또는 구조적으로 유리)한 섹터일 가능성이 높습니다.
+    </div>
+    <div id="industriesContainer">
+      <div class="loading">산업 요약을 불러오는 중...</div>
+    </div>
+  </div>
+
+  <!-- Strategy List -->
+  <div class="card">
+    <h2 class="section-title">Strategies</h2>
+    <div class="chart-description">
+      <strong>전략별 한 줄 요약:</strong>
+      전략명과 함께 최신 Net IRR 및 주요 산업(Industries)을 한 번에 볼 수 있게 구성했습니다.
+    </div>
+    <div id="strategyList">
+      <div class="loading">전략 목록을 불러오는 중...</div>
+    </div>
+  </div>
+
+  <!-- SEC Filings -->
+  <div class="card">
+    <h2 class="filings-header">SEC Filings</h2>
+    <div class="chart-description">
+      <strong>최근 Private Equity 펀드 파일링:</strong>
+      이 섹션은 private equity 관련 최신 SEC 파일링(예: Form D, ADV 등)을 보여줍니다.
+      파일링은 펀드 조성/운용 관련 규제 문서로, 신규 설정/변경 흐름을 간접적으로 파악하는 데 도움이 됩니다.
+    </div>
+    <div id="filingsContainer">
+      <div class="loading">최근 private equity 파일링을 불러오는 중...</div>
+    </div>
   </div>
 </main>
+
+<script>
+  let irrChart = null;
+
+  function safeNumber(n) {
+    const x = Number(n);
+    return Number.isFinite(x) ? x : null;
+  }
+
+  function fmtPct(n, digits=2) {
+    const x = safeNumber(n);
+    if (x === null) return '-';
+    return `${x.toFixed(digits)}%`;
+  }
+
+  function getLatestValue(history) {
+    if (!Array.isArray(history) || history.length === 0) return null;
+    const sorted = [...history].filter(x => x && x.date != null && x.value != null)
+      .sort((a,b) => String(a.date).localeCompare(String(b.date)));
+    if (sorted.length === 0) return null;
+    return safeNumber(sorted[sorted.length - 1].value);
+  }
+
+  function getDeltaDirection(history) {
+    if (!Array.isArray(history) || history.length < 2) return null;
+    const sorted = [...history].filter(x => x && x.date != null && x.value != null)
+      .sort((a,b) => String(a.date).localeCompare(String(b.date)));
+    if (sorted.length < 2) return null;
+    const first = safeNumber(sorted[0].value);
+    const last = safeNumber(sorted[sorted.length - 1].value);
+    if (first === null || last === null) return null;
+    if (last > first) return 'up';
+    if (last < first) return 'down';
+    return 'flat';
+  }
+
+  function computeOverview(strategies) {
+    const latestValues = [];
+    let up = 0, down = 0, flat = 0;
+
+    strategies.forEach(s => {
+      const latest = getLatestValue(s.irrHistory);
+      if (latest !== null) latestValues.push(latest);
+
+      const dir = getDeltaDirection(s.irrHistory);
+      if (dir === 'up') up++;
+      else if (dir === 'down') down++;
+      else if (dir === 'flat') flat++;
+    });
+
+    const avg = latestValues.length
+      ? latestValues.reduce((a,b)=>a+b,0) / latestValues.length
+      : null;
+
+    const best = latestValues.length ? Math.max(...latestValues) : null;
+    const worst = latestValues.length ? Math.min(...latestValues) : null;
+
+    return {
+      totalStrategies: strategies.length,
+      avgLatestIRR: avg,
+      bestLatestIRR: best,
+      worstLatestIRR: worst,
+      dirCounts: { up, down, flat },
+      includedInAvg: latestValues.length
+    };
+  }
+
+  function buildIndustries(strategies) {
+    const freq = new Map();
+    strategies.forEach(s => {
+      (s.industries || []).forEach(t => {
+        const key = String(t || '').trim();
+        if (!key) return;
+        freq.set(key, (freq.get(key) || 0) + 1);
+      });
+    });
+    const sorted = [...freq.entries()].sort((a,b) => b[1] - a[1]);
+    return sorted.slice(0, 12).map(([industry, count]) => ({ industry, count }));
+  }
+
+  function renderBadges(ov) {
+    const metricRow = document.getElementById('metricRow');
+    metricRow.innerHTML = `
+      <span class="metric-badge">Strategies: ${ov.totalStrategies}</span>
+      <span class="subtle-badge">Avg Latest Net IRR: ${fmtPct(ov.avgLatestIRR)}</span>
+      <span class="subtle-badge">Best: ${fmtPct(ov.bestLatestIRR)}</span>
+      <span class="subtle-badge">Worst: ${fmtPct(ov.worstLatestIRR)}</span>
+      <span class="subtle-badge">Trend: ↑ ${ov.dirCounts.up} · ↓ ${ov.dirCounts.down} · → ${ov.dirCounts.flat}</span>
+    `;
+    document.getElementById('metricMeaning').style.display = 'block';
+  }
+
+  function populateSelect(strategies) {
+    const sel = document.getElementById('strategySelect');
+    sel.innerHTML = '';
+
+    strategies.forEach((s, idx) => {
+      const opt = document.createElement('option');
+      opt.value = String(idx);
+      opt.textContent = `${s.strategy || 'Strategy'}`;
+      sel.appendChild(opt);
+    });
+
+    sel.addEventListener('change', () => {
+      const i = Number(sel.value);
+      const s = strategies[i];
+      renderSelectedMeta(s);
+      renderIRRChart(s);
+    });
+  }
+
+  function renderSelectedMeta(s) {
+    const meta = document.getElementById('selectedMeta');
+    const latest = getLatestValue(s.irrHistory);
+    const dir = getDeltaDirection(s.irrHistory);
+    const arrow = dir === 'up' ? '↑' : dir === 'down' ? '↓' : dir === 'flat' ? '→' : '-';
+    meta.textContent = `Latest: ${fmtPct(latest)}  ${arrow}`;
+    meta.style.display = 'inline-block';
+  }
+
+  function renderIRRChart(strategy) {
+    const canvas = document.getElementById('irrChart');
+    const ctx = canvas.getContext('2d');
+
+    const history = Array.isArray(strategy.irrHistory) ? strategy.irrHistory : [];
+    const sorted = [...history].filter(x => x && x.date != null && x.value != null)
+      .sort((a,b) => String(a.date).localeCompare(String(b.date)));
+
+    const labels = sorted.map(x => x.date);
+    const values = sorted.map(x => safeNumber(x.value));
+
+    if (irrChart) irrChart.destroy();
+
+    irrChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Net IRR %',
+          data: values,
+          borderColor: 'rgba(99, 102, 241, 1)',
+          backgroundColor: 'rgba(99, 102, 241, 0.15)',
+          borderWidth: 2,
+          tension: 0.25,
+          pointRadius: 2,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: { color: '#e5e7eb' }
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: ${fmtPct(ctx.raw, 2)}`
+            }
+          }
+        },
+        scales: {
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+            ticks: { color: '#9ca3af' }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: '#9ca3af', maxRotation: 0, autoSkip: true }
+          }
+        }
+      }
+    });
+  }
+
+  function renderIndustries(industryList) {
+    const c = document.getElementById('industriesContainer');
+
+    if (!industryList.length) {
+      c.innerHTML = `<div class="chart-description">표시할 산업 데이터가 없습니다. (API에서 industries가 비어있을 수 있습니다)</div>`;
+      return;
+    }
+
+    const pills = industryList.map(t => `
+      <span class="subtle-badge" style="border-color: rgba(99,102,241,.35);">
+        ${t.industry} · ${t.count}
+      </span>
+    `).join('');
+
+    c.innerHTML = `
+      <div class="metric-row" style="margin-top:0;">${pills}</div>
+      <div class="divider"></div>
+      <div class="chart-description" style="margin-bottom:0;">
+        <strong>해석 팁:</strong>
+        count는 해당 섹터가 몇 개 전략에서 반복되는지(빈도)입니다.
+        여러 전략에서 동시에 반복되는 섹터는, 구조적 성장/롤업/밸류업 여지가 크거나
+        자본이 몰리는 “컨센서스 섹터”일 가능성이 있습니다.
+      </div>
+    `;
+  }
+
+  function renderStrategyList(strategies) {
+    const list = document.getElementById('strategyList');
+
+    if (!strategies.length) {
+      list.innerHTML = `<div class="chart-description">표시할 전략이 없습니다.</div>`;
+      return;
+    }
+
+    list.innerHTML = `
+      <div class="grid">
+        ${strategies.map(s => {
+          const latest = getLatestValue(s.irrHistory);
+          const dir = getDeltaDirection(s.irrHistory);
+          const arrow = dir === 'up' ? '↑' : dir === 'down' ? '↓' : dir === 'flat' ? '→' : '-';
+          const inds = (s.industries || []).length ? s.industries.join(', ') : '산업 데이터 없음';
+          return `
+            <div class="item">
+              <div class="item-title">${s.strategy || 'Strategy'}</div>
+              <div class="item-meta">Latest Net IRR: <strong style="color:#fff;">${fmtPct(latest)}</strong> <span style="color:#9ca3af;">${arrow}</span></div>
+              <div class="item-box"><strong style="color:#e5e7eb;">Industries:</strong> ${inds}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  function renderFilings(filings) {
+    const filingsContainer = document.getElementById('filingsContainer');
+
+    if (!Array.isArray(filings) || filings.length === 0) {
+      filingsContainer.innerHTML = `<div class="chart-description">표시할 파일링이 없습니다.</div>`;
+      return;
+    }
+
+    filingsContainer.innerHTML = filings.map(f => {
+      // input: { fund, form, date, url? } 형태를 가정하고 최대한 호환
+      const fund = f.fund ?? f.name ?? 'Fund';
+      const form = f.form ?? f.formType ?? '-';
+      const dateRaw = f.date ?? f.filedDate ?? f.filingDate ?? null;
+
+      let formattedDate = '-';
+      if (dateRaw) {
+        const dt = new Date(dateRaw);
+        formattedDate = isNaN(dt.getTime())
+          ? String(dateRaw)
+          : dt.toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric' });
+      }
+
+      const url = f.url ?? f.link ?? null;
+
+      return `
+        <div class="filing-item">
+          <div class="filing-fund">${fund}</div>
+          <div class="filing-details">
+            <strong>양식:</strong> ${form} |
+            <strong>제출일:</strong> ${formattedDate}
+          </div>
+          ${url ? `<a href="${url}" target="_blank" class="filing-link">SEC EDGAR에서 보기 →</a>` : ``}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function normalizeStrategies(data) {
+    const strategies = Array.isArray(data?.strategies) ? data.strategies
+      : Array.isArray(data?.data?.strategies) ? data.data.strategies
+      : Array.isArray(data?.items) ? data.items
+      : [];
+
+    return strategies.map(s => ({
+      strategy: s.strategy ?? s.name ?? 'Strategy',
+      industries: Array.isArray(s.industries) ? s.industries : [],
+      irrHistory: Array.isArray(s.irrHistory) ? s.irrHistory
+        : Array.isArray(s.netIrrHistory) ? s.netIrrHistory
+        : Array.isArray(s.history) ? s.history
+        : []
+    }));
+  }
+
+  async function loadData() {
+    try {
+      const response = await fetch('/.netlify/functions/pe');
+      const data = await response.json();
+
+      const strategies = normalizeStrategies(data);
+      const filings = data.secFilings ?? data.filings ?? [];
+
+      if (!strategies.length) {
+        document.getElementById('metricRow').innerHTML = `<span class="subtle-badge">No data</span>`;
+        document.getElementById('industriesContainer').innerHTML = `<div class="chart-description">PE 데이터가 비어있습니다.</div>`;
+        document.getElementById('strategyList').innerHTML = `<div class="chart-description">PE 데이터가 비어있습니다.</div>`;
+        renderFilings(filings);
+        return;
+      }
+
+      // Overview badges
+      const ov = computeOverview(strategies);
+      renderBadges(ov);
+
+      // Select + default chart
+      populateSelect(strategies);
+      renderSelectedMeta(strategies[0]);
+      renderIRRChart(strategies[0]);
+
+      // Industries summary
+      const industries = buildIndustries(strategies);
+      renderIndustries(industries);
+
+      // Strategy list
+      renderStrategyList(strategies);
+
+      // Filings
+      renderFilings(filings);
+
+    } catch (error) {
+      console.error('Error loading data:', error);
+      document.getElementById('metricRow').innerHTML = `<span class="metric-badge">Error</span>`;
+      document.getElementById('industriesContainer').innerHTML = `<div class="error">데이터를 불러오는 중 오류가 발생했습니다.</div>`;
+      document.getElementById('strategyList').innerHTML = `<div class="error">데이터를 불러오는 중 오류가 발생했습니다.</div>`;
+      document.getElementById('filingsContainer').innerHTML = `<div class="error">데이터를 불러오는 중 오류가 발생했습니다.</div>`;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadData);
+</script>
 </body>
 </html>
