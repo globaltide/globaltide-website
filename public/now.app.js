@@ -1,4 +1,3 @@
-```js
 /* =====================
    Config (shared)
 ===================== */
@@ -386,4 +385,3 @@ async function loadDataForState(){
     body: JSON.stringify({ path: window.location.pathname, referrer: document.referrer || '' })
   }).catch(()=>{});
 })();
-```
