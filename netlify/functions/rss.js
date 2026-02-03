@@ -9,69 +9,60 @@ exports.handler = async function () {
     let match;
     while ((match = regex.exec(xml)) !== null) {
       const block = match[1];
-      const title = (block.match(/<title>([\s\S]*?)<\/title>/) || [null, ""])[1];
+      const title = (block.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/) || block.match(/<title>([\s\S]*?)<\/title>/) || [null, null, ""])[2] || (block.match(/<title>([\s\S]*?)<\/title>/) || [null, ""])[1];
       const link = (block.match(/<link>([\s\S]*?)<\/link>/) || [null, ""])[1];
       const pubDate = (block.match(/<pubDate>([\s\S]*?)<\/pubDate>/) || [null, ""])[1];
       
-      // RSS description (요약문) 추출
-      const descMatch = block.match(/<description>([\s\S]*?)<\/description>/);
-      let description = descMatch ? descMatch[1] : "";
-      
-      // HTML 태그 제거 및 정리
-      description = description
-        .replace(/<[^>]+>/g, '') // HTML 태그 제거
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&amp;/g, '&')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .trim();
-      
-      // 첫 100자만 (너무 길면 자르기)
-      if (description.length > 100) {
-        description = description.substring(0, 100) + "...";
-      }
-      
-      items.push({ title, link, pubDate, description });
+      items.push({ 
+        title: cleanText(title), 
+        link, 
+        pubDate 
+      });
     }
 
-    // description을 번역
+    // 제목만 간단하게 번역 (빠르고 깔끔)
     const itemsToTranslate = items.slice(0, 15);
     
     try {
       for (const item of itemsToTranslate) {
         try {
-          // description이 있으면 그것을 번역, 없으면 제목 번역
-          const textToTranslate = item.description || item.title;
-          const encodedText = encodeURIComponent(textToTranslate);
+          const encodedText = encodeURIComponent(item.title);
           const translateUrl = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ko&dt=t&q=" + encodedText;
           
           const translateRes = await fetch(translateUrl);
           const translateData = await translateRes.json();
           
           if (translateData && translateData[0] && translateData[0][0] && translateData[0][0][0]) {
-            item.summary = translateData[0][0][0];
+            let translated = translateData[0][0][0];
+            
+            // 후처리
+            translated = translated
+              .replace(/\s*-\s*[A-Za-z\s]+$/, '') // 출처 제거 (예: "- CNN", "- The New York Times")
+              .replace(/^"(.*)"$/, '$1') // 따옴표 제거
+              .trim();
+            
+            item.summary = translated;
           } else {
-            item.summary = item.description || item.title;
+            item.summary = item.title;
           }
           
           await new Promise(resolve => setTimeout(resolve, 100));
           
         } catch (translateError) {
           console.error("Translation error:", translateError);
-          item.summary = item.description || item.title;
+          item.summary = item.title;
         }
       }
     } catch (apiError) {
       console.error("Translation API error:", apiError);
       itemsToTranslate.forEach(item => {
-        if (!item.summary) item.summary = item.description || item.title;
+        if (!item.summary) item.summary = item.title;
       });
     }
 
     items.forEach(item => {
       if (!item.summary) {
-        item.summary = item.description || item.title;
+        item.summary = item.title;
       }
     });
 
@@ -90,3 +81,17 @@ exports.handler = async function () {
     };
   }
 };
+
+function cleanText(text) {
+  if (!text) return "";
+  return text
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1') // CDATA 제거
+    .replace(/<[^>]+>/g, '') // HTML 태그 제거
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .trim();
+}
