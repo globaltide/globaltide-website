@@ -3,42 +3,554 @@
 <head>
   <meta charset="utf-8" />
   <title>Infrastructure | GlobalTide</title>
+
   <script defer src="/nav-top.js"></script>
   <script defer src="/nav-bottom.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    body{margin:0;font-family:-apple-system;background:#0b1020;color:#e5e7eb}
-    main{max-width:1100px;margin:0 auto;padding:24px 14px;
-      padding-top:calc(var(--gt-topnav-h,56px)+20px);
-      padding-bottom:calc(var(--gt-bottomnav-h,64px)+20px)}
-    .card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
-      border-radius:14px;padding:14px;margin-top:14px}
-  </style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #0b1020;
+      color: #e5e7eb;
+    }
 
-  <script>
-    fetch("/.netlify/functions/infra")
-      .then(r=>r.json())
-      .then(d=>{
-        d.strategies.forEach((s,i)=>{
-          const id="infra"+i;
-          document.getElementById("main").insertAdjacentHTML("beforeend",
-            `<div class="card"><h3>${s.strategy} (${s.type})</h3>
-             <canvas id="${id}"></canvas>
-             <p>Trends: ${s.trends.join(", ")}</p></div>`
-          );
-          new Chart(document.getElementById(id),{
-            type:"line",
-            data:{labels:s.yieldHistory.map(x=>x.date),
-              datasets:[{label:"Yield %",data:s.yieldHistory.map(x=>x.value)}]}
-          });
-        });
-      });
-  </script>
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 14px;
+      padding-top: calc(var(--gt-topnav-h, 56px) + 20px);
+      padding-bottom: calc(var(--gt-bottomnav-h, 64px) + 20px);
+    }
+
+    h1 {
+      color: #fff;
+      font-size: 2rem;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, .05);
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 14px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+
+    .section-title {
+      color: #fff;
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+    }
+
+    .chart-description {
+      color: #9ca3af;
+      line-height: 1.6;
+      margin-bottom: 15px;
+      padding: 12px;
+      background: rgba(255, 255, 255, .03);
+      border-radius: 8px;
+      border-left: 3px solid #6366f1;
+      font-size: 0.95rem;
+    }
+
+    .metric-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 10px 0 15px 0;
+    }
+
+    .metric-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    .subtle-badge {
+      display: inline-block;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      color: #e5e7eb;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin: 10px 0 10px 0;
+    }
+
+    select {
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .14);
+      color: #e5e7eb;
+      padding: 10px 12px;
+      border-radius: 10px;
+      outline: none;
+      font-size: 0.95rem;
+      max-width: 100%;
+    }
+
+    option {
+      background: #0b1020;
+      color: #e5e7eb;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      height: 280px;
+      margin-top: 12px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 30px;
+      color: #9ca3af;
+      font-size: 1rem;
+    }
+
+    .error {
+      color: #ef4444;
+      padding: 15px;
+      background: rgba(239, 68, 68, 0.1);
+      border-radius: 8px;
+    }
+
+    .strategy-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .strategy-item {
+      grid-column: span 6;
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 12px;
+      background: rgba(255,255,255,.02);
+      transition: all .2s ease;
+    }
+
+    .strategy-item:hover {
+      background: rgba(255,255,255,.05);
+      border-color: rgba(99, 102, 241, 0.7);
+      transform: translateY(-1px);
+    }
+
+    .strategy-name {
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.05rem;
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+
+    .strategy-meta {
+      color: #9ca3af;
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+    }
+
+    .strategy-trends {
+      color: #cbd5e1;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .divider {
+      height: 1px;
+      background: rgba(255,255,255,.10);
+      margin: 14px 0;
+    }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 1.6rem; }
+      .chart-wrapper { height: 240px; }
+      .card { padding: 15px; }
+      .strategy-item { grid-column: span 12; }
+    }
+  </style>
 </head>
+
 <body>
-<main id="main">
+<main>
   <h1>Infrastructure Market</h1>
+
+  <!-- Market Overview + Chart -->
+  <div class="card">
+    <h2 class="section-title">Infrastructure Market Overview</h2>
+
+    <div class="chart-description" id="overviewMeaning">
+      <strong>이 페이지의 의미:</strong>
+      Infrastructure 시장은 금리(조달비용), 인플레이션(캡엑스), 규제/정책, 그리고 장기 계약(현금흐름 안정성)의 영향을 크게 받습니다.
+      아래는 인프라 전략별 수익률(또는 Yield) 흐름과, 전략들이 최근 어떤 테마(Trends)로 움직이는지 요약한 화면입니다.
+    </div>
+
+    <div class="metric-row" id="metricRow">
+      <span class="metric-badge">Loading...</span>
+    </div>
+
+    <div class="chart-description" id="metricMeaning" style="display:none;">
+      <strong>지표 해석:</strong>
+      평균 Yield는 전략별 최신(가장 최근 날짜) 수치를 기반으로 계산합니다.
+      “상승/하락”은 동일 전략의 최근 구간 변화(초기값 대비 최신값)를 단순 비교한 방향성입니다.
+      (데이터 포인트 수가 적거나 누락되면 해당 전략은 집계에서 제외될 수 있습니다.)
+    </div>
+
+    <div class="controls">
+      <span style="color:#9ca3af;font-size:0.95rem;">차트 전략 선택</span>
+      <select id="strategySelect" aria-label="strategy select">
+        <option>Loading...</option>
+      </select>
+      <span id="selectedMeta" class="subtle-badge" style="display:none;"></span>
+    </div>
+
+    <div class="chart-wrapper">
+      <canvas id="yieldChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Key Themes / Trends Summary -->
+  <div class="card">
+    <h2 class="section-title">Key Themes</h2>
+    <div class="chart-description" id="themesDescription">
+      <strong>최근 트렌드 요약:</strong>
+      각 전략(예: Core/Core+, Value-add, Renewables, Digital Infra 등)이 어떤 키워드(Trends)를 중심으로 움직이는지 합산하여 보여줍니다.
+      특정 테마가 여러 전략에서 반복되면, 시장 전체의 공통 관심사일 가능성이 높습니다.
+    </div>
+    <div id="themesContainer">
+      <div class="loading">인프라 트렌드를 불러오는 중...</div>
+    </div>
+  </div>
+
+  <!-- Strategy List -->
+  <div class="card">
+    <h2 class="section-title">Strategies</h2>
+    <div class="chart-description">
+      <strong>전략별 한 줄 요약:</strong>
+      아래 리스트는 전략명/유형과 함께, 해당 전략에서 관찰되는 Trends를 한 번에 볼 수 있게 구성했습니다.
+    </div>
+    <div id="strategyList">
+      <div class="loading">전략 목록을 불러오는 중...</div>
+    </div>
+  </div>
 </main>
+
+<script>
+  let yieldChart = null;
+  let infraData = null;
+
+  function safeNumber(n) {
+    const x = Number(n);
+    return Number.isFinite(x) ? x : null;
+  }
+
+  function fmtPct(n, digits=2) {
+    const x = safeNumber(n);
+    if (x === null) return '-';
+    return `${x.toFixed(digits)}%`;
+  }
+
+  function getLatestValue(history) {
+    if (!Array.isArray(history) || history.length === 0) return null;
+    // assumes ordered; if not, sort by date string
+    const sorted = [...history].filter(x => x && x.date != null && x.value != null)
+      .sort((a,b) => String(a.date).localeCompare(String(b.date)));
+    if (sorted.length === 0) return null;
+    return safeNumber(sorted[sorted.length - 1].value);
+  }
+
+  function getDeltaDirection(history) {
+    if (!Array.isArray(history) || history.length < 2) return null;
+    const sorted = [...history].filter(x => x && x.date != null && x.value != null)
+      .sort((a,b) => String(a.date).localeCompare(String(b.date)));
+    if (sorted.length < 2) return null;
+    const first = safeNumber(sorted[0].value);
+    const last = safeNumber(sorted[sorted.length - 1].value);
+    if (first === null || last === null) return null;
+    if (last > first) return 'up';
+    if (last < first) return 'down';
+    return 'flat';
+  }
+
+  function computeOverview(strategies) {
+    const latestValues = [];
+    let up = 0, down = 0, flat = 0;
+
+    strategies.forEach(s => {
+      const latest = getLatestValue(s.yieldHistory);
+      if (latest !== null) latestValues.push(latest);
+
+      const dir = getDeltaDirection(s.yieldHistory);
+      if (dir === 'up') up++;
+      else if (dir === 'down') down++;
+      else if (dir === 'flat') flat++;
+    });
+
+    const avg = latestValues.length
+      ? latestValues.reduce((a,b)=>a+b,0) / latestValues.length
+      : null;
+
+    const best = latestValues.length ? Math.max(...latestValues) : null;
+    const worst = latestValues.length ? Math.min(...latestValues) : null;
+
+    return {
+      totalStrategies: strategies.length,
+      avgLatestYield: avg,
+      bestLatestYield: best,
+      worstLatestYield: worst,
+      dirCounts: { up, down, flat },
+      includedInAvg: latestValues.length
+    };
+  }
+
+  function buildThemes(strategies) {
+    const freq = new Map();
+    strategies.forEach(s => {
+      (s.trends || []).forEach(t => {
+        const key = String(t || '').trim();
+        if (!key) return;
+        freq.set(key, (freq.get(key) || 0) + 1);
+      });
+    });
+
+    const sorted = [...freq.entries()].sort((a,b) => b[1] - a[1]);
+    return sorted.slice(0, 12).map(([theme, count]) => ({ theme, count }));
+  }
+
+  function renderBadges(ov) {
+    const metricRow = document.getElementById('metricRow');
+    metricRow.innerHTML = `
+      <span class="metric-badge">Strategies: ${ov.totalStrategies}</span>
+      <span class="subtle-badge">Avg Latest Yield: ${fmtPct(ov.avgLatestYield)}</span>
+      <span class="subtle-badge">Best: ${fmtPct(ov.bestLatestYield)}</span>
+      <span class="subtle-badge">Worst: ${fmtPct(ov.worstLatestYield)}</span>
+      <span class="subtle-badge">Trend: ↑ ${ov.dirCounts.up} · ↓ ${ov.dirCounts.down} · → ${ov.dirCounts.flat}</span>
+    `;
+    document.getElementById('metricMeaning').style.display = 'block';
+  }
+
+  function populateSelect(strategies) {
+    const sel = document.getElementById('strategySelect');
+    sel.innerHTML = '';
+
+    strategies.forEach((s, idx) => {
+      const opt = document.createElement('option');
+      opt.value = String(idx);
+      opt.textContent = `${s.strategy || 'Strategy'} (${s.type || 'N/A'})`;
+      sel.appendChild(opt);
+    });
+
+    sel.addEventListener('change', () => {
+      const i = Number(sel.value);
+      const s = strategies[i];
+      renderSelectedMeta(s);
+      renderYieldChart(s);
+    });
+  }
+
+  function renderSelectedMeta(s) {
+    const meta = document.getElementById('selectedMeta');
+    const latest = getLatestValue(s.yieldHistory);
+    const dir = getDeltaDirection(s.yieldHistory);
+    const arrow = dir === 'up' ? '↑' : dir === 'down' ? '↓' : dir === 'flat' ? '→' : '-';
+    meta.textContent = `Latest: ${fmtPct(latest)}  ${arrow}`;
+    meta.style.display = 'inline-block';
+  }
+
+  function renderYieldChart(strategy) {
+    const canvas = document.getElementById('yieldChart');
+    const ctx = canvas.getContext('2d');
+
+    const history = Array.isArray(strategy.yieldHistory) ? strategy.yieldHistory : [];
+    const sorted = [...history].filter(x => x && x.date != null && x.value != null)
+      .sort((a,b) => String(a.date).localeCompare(String(b.date)));
+
+    const labels = sorted.map(x => x.date);
+    const values = sorted.map(x => safeNumber(x.value));
+
+    if (yieldChart) yieldChart.destroy();
+
+    yieldChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Yield %',
+          data: values,
+          borderColor: 'rgba(99, 102, 241, 1)',
+          backgroundColor: 'rgba(99, 102, 241, 0.15)',
+          borderWidth: 2,
+          tension: 0.25,
+          pointRadius: 2,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: { color: '#e5e7eb' }
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: ${fmtPct(ctx.raw, 2)}`
+            }
+          }
+        },
+        scales: {
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+            ticks: { color: '#9ca3af' }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: '#9ca3af', maxRotation: 0, autoSkip: true }
+          }
+        }
+      }
+    });
+  }
+
+  function renderThemes(themes) {
+    const c = document.getElementById('themesContainer');
+
+    if (!themes.length) {
+      c.innerHTML = `<div class="chart-description">표시할 트렌드가 없습니다. (API에서 trends가 비어있을 수 있습니다)</div>`;
+      return;
+    }
+
+    const pills = themes.map(t => `
+      <span class="subtle-badge" style="border-color: rgba(99,102,241,.35);">
+        ${t.theme} · ${t.count}
+      </span>
+    `).join('');
+
+    c.innerHTML = `
+      <div class="metric-row" style="margin-top:0;">${pills}</div>
+      <div class="divider"></div>
+      <div class="chart-description" style="margin-bottom:0;">
+        <strong>해석 팁:</strong>
+        count는 해당 키워드가 몇 개 전략에서 반복되는지(빈도)입니다.
+        여러 전략에서 동시에 반복되는 키워드는, 공통 매크로/섹터 드라이버(금리·규제·전력수요·데이터센터/AI 등)일 가능성이 큽니다.
+      </div>
+    `;
+  }
+
+  function renderStrategyList(strategies) {
+    const list = document.getElementById('strategyList');
+
+    if (!strategies.length) {
+      list.innerHTML = `<div class="chart-description">표시할 전략이 없습니다.</div>`;
+      return;
+    }
+
+    const html = `
+      <div class="strategy-grid">
+        ${strategies.map(s => {
+          const latest = getLatestValue(s.yieldHistory);
+          const dir = getDeltaDirection(s.yieldHistory);
+          const arrow = dir === 'up' ? '↑' : dir === 'down' ? '↓' : dir === 'flat' ? '→' : '-';
+          const trends = (s.trends || []).length ? s.trends.join(', ') : '트렌드 데이터 없음';
+          return `
+            <div class="strategy-item">
+              <div class="strategy-name">${s.strategy || 'Strategy'} <span style="color:#9ca3af;font-weight:600;">(${s.type || 'N/A'})</span></div>
+              <div class="strategy-meta">Latest Yield: <strong style="color:#fff;">${fmtPct(latest)}</strong> <span style="color:#9ca3af;">${arrow}</span></div>
+              <div class="strategy-trends"><strong style="color:#e5e7eb;">Trends:</strong> ${trends}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+
+    list.innerHTML = html;
+  }
+
+  function normalizeApiStrategies(data) {
+    // 기존 infra 함수 형태(d.strategies) 기준.
+    // 혹시 다른 키로 오더라도 최대한 맞춰봄.
+    const strategies = Array.isArray(data?.strategies) ? data.strategies
+      : Array.isArray(data?.data?.strategies) ? data.data.strategies
+      : Array.isArray(data?.items) ? data.items
+      : [];
+
+    // 최소한의 필드 보정
+    return strategies.map(s => ({
+      strategy: s.strategy ?? s.name ?? 'Strategy',
+      type: s.type ?? s.category ?? 'N/A',
+      trends: Array.isArray(s.trends) ? s.trends : [],
+      yieldHistory: Array.isArray(s.yieldHistory) ? s.yieldHistory
+        : Array.isArray(s.yields) ? s.yields
+        : []
+    }));
+  }
+
+  async function loadData() {
+    try {
+      const res = await fetch('/.netlify/functions/infra');
+      const raw = await res.json();
+      infraData = raw;
+
+      const strategies = normalizeApiStrategies(raw);
+
+      if (!strategies.length) {
+        document.getElementById('metricRow').innerHTML = `<span class="subtle-badge">No data</span>`;
+        document.getElementById('themesContainer').innerHTML = `<div class="chart-description">인프라 데이터가 비어있습니다.</div>`;
+        document.getElementById('strategyList').innerHTML = `<div class="chart-description">인프라 데이터가 비어있습니다.</div>`;
+        return;
+      }
+
+      // Overview
+      const ov = computeOverview(strategies);
+      renderBadges(ov);
+
+      // Select + default chart
+      populateSelect(strategies);
+      renderSelectedMeta(strategies[0]);
+      renderYieldChart(strategies[0]);
+
+      // Themes
+      const themes = buildThemes(strategies);
+      renderThemes(themes);
+
+      // Strategy list
+      renderStrategyList(strategies);
+
+    } catch (err) {
+      console.error('Error loading infra data:', err);
+      document.getElementById('metricRow').innerHTML = `<span class="metric-badge">Error</span>`;
+      document.getElementById('themesContainer').innerHTML = `
+        <div class="error">데이터를 불러오는 중 오류가 발생했습니다.</div>
+      `;
+      document.getElementById('strategyList').innerHTML = `
+        <div class="error">데이터를 불러오는 중 오류가 발생했습니다.</div>
+      `;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadData);
+</script>
 </body>
 </html>
