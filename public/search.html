@@ -4,64 +4,31 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>GlobalTide · Search</title>
-
   <link rel="stylesheet" href="/css/search.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <!-- Excel 버튼 강조 스타일 -->
   <style>
-    .kw-row{
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    .btn.excel{
-      background: #107c41; /* Excel green */
-      color: #fff;
-      font-weight: 700;
-      border: 1px solid rgba(0,0,0,.1);
-    }
-    .btn.excel:hover{
-      filter: brightness(1.05);
-    }
-    
-    /* 추천 키워드 스타일 */
-    .suggested-keywords {
-      margin: 16px 0;
-      padding: 16px;
-      background: rgba(59, 130, 246, 0.05);
-      border: 1px solid rgba(59, 130, 246, 0.2);
-      border-radius: 12px;
-    }
-    .suggested-keywords-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: #60a5fa;
-      margin-bottom: 10px;
-    }
-    .suggested-keywords-list {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .suggested-keyword-chip {
-      padding: 6px 14px;
-      background: rgba(59, 130, 246, 0.1);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      border-radius: 20px;
-      font-size: 13px;
-      color: #60a5fa;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .suggested-keyword-chip:hover {
-      background: rgba(59, 130, 246, 0.2);
-      border-color: rgba(59, 130, 246, 0.5);
-      transform: translateY(-1px);
-    }
+    .kw-row{ display: flex; gap: 8px; align-items: center; }
+    .btn.excel{ background: #107c41; color: #fff; font-weight: 700; border: 1px solid rgba(0,0,0,.1); }
+    .btn.excel:hover{ filter: brightness(1.05); }
+    .suggested-keywords { margin: 16px 0; padding: 16px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 12px; }
+    .suggested-keywords-title { font-size: 13px; font-weight: 600; color: #60a5fa; margin-bottom: 10px; }
+    .suggested-keywords-list { display: flex; gap: 8px; flex-wrap: wrap; }
+    .suggested-keyword-chip { padding: 6px 14px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 20px; font-size: 13px; color: #60a5fa; cursor: pointer; transition: all 0.2s; }
+    .suggested-keyword-chip:hover { background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.5); transform: translateY(-1px); }
+    .date-filter-section { margin: 16px 0; padding: 16px; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 12px; }
+    .date-filter-title { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 12px; }
+    .date-filter-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .date-btn { padding: 8px 16px; background: white; border: 1px solid #d0d0d0; border-radius: 8px; font-size: 13px; color: #555; cursor: pointer; transition: all 0.2s; }
+    .date-btn:hover { background: #f0f0f0; border-color: #999; }
+    .date-btn.active { background: #2563eb; color: white; border-color: #2563eb; font-weight: 600; }
+    .date-range-picker { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .date-input-group { display: flex; flex-direction: column; gap: 4px; }
+    .date-input-group label { font-size: 12px; color: #666; font-weight: 500; }
+    .date-input-group input[type="date"] { padding: 8px 12px; border: 1px solid #d0d0d0; border-radius: 8px; font-size: 13px; color: #333; background: white; }
+    .date-input-group input[type="date"]:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+    .date-separator { font-size: 14px; color: #999; margin-top: 20px; }
   </style>
 </head>
-
 <body>
   <div id="swipe-root">
     <div class="wrap">
@@ -71,74 +38,71 @@
             <div class="title">Search</div>
             <div class="subtitle">특정 단어로 검색해서 결과를 뿌립니다</div>
           </div>
-
           <div class="top-actions">
             <button class="btn secondary" id="btnLogin">로그인</button>
             <button class="btn secondary" id="btnLogout" style="display:none;">로그아웃</button>
             <button class="btn" id="btnKeywordManage">내 키워드 관리</button>
           </div>
         </div>
-
+        <div class="date-filter-section">
+          <div class="date-filter-title">📅 검색 기간</div>
+          <div class="date-filter-buttons">
+            <button class="date-btn" data-period="1m">1개월</button>
+            <button class="date-btn" data-period="3m">3개월</button>
+            <button class="date-btn" data-period="6m">6개월</button>
+            <button class="date-btn" data-period="1y">1년</button>
+            <button class="date-btn active" data-period="all">전체</button>
+          </div>
+          <div class="date-range-picker">
+            <div class="date-input-group">
+              <label for="startDate">시작일</label>
+              <input type="date" id="startDate" />
+            </div>
+            <div class="date-separator">~</div>
+            <div class="date-input-group">
+              <label for="endDate">종료일</label>
+              <input type="date" id="endDate" />
+            </div>
+          </div>
+        </div>
         <div class="searchbar">
           <input id="qInput" type="text" placeholder="검색어 입력 (예: Private Debt)" />
           <button class="btn" id="btnSearch">검색</button>
         </div>
-
-        <!-- 추천 키워드 섹션 -->
         <div class="suggested-keywords">
           <div class="suggested-keywords-title">💡 추천 키워드</div>
           <div class="suggested-keywords-list">
-            <div class="suggested-keyword-chip" data-keywords="default rate,private debt crisis">
-              default rate + private debt crisis
-            </div>
+            <div class="suggested-keyword-chip" data-keywords="default rate,private debt crisis">default rate + private debt crisis</div>
           </div>
         </div>
-
         <div class="kw-panel" id="kwPanel" style="display:none;">
           <div class="kw-panel-head">
             <div class="kw-userline" id="kwUserLine"></div>
           </div>
-
-          <!-- ✅ 추가 버튼 오른쪽에 Excel 버튼 -->
           <div class="kw-row">
             <input id="kwInput" type="text" placeholder="키워드 추가 (예: direct lending)" />
             <button class="btn" id="kwAddBtn">추가</button>
             <button class="btn excel" id="btnExportXlsx" style="display:none;">Excel</button>
           </div>
-
           <div class="kw-chips" id="kwChips"></div>
           <div class="kw-status" id="kwStatus"></div>
         </div>
-
         <div class="meta" id="status"></div>
         <div class="posts" id="posts"></div>
         <div class="errbox" id="errbox" style="display:none;"></div>
       </section>
     </div>
   </div>
-
-  <!-- 공용 네비 -->
   <script src="/nav-top.js"></script>
   <script src="/nav-bottom.js"></script>
   <script src="/swipe-nav.js"></script>
-
-  <!-- XLSX -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-  <!-- search 로직 -->
   <script type="module" src="/js/search/main.js"></script>
-  
-  <!-- 추천 키워드 클릭 이벤트 -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // 추천 키워드 클릭 이벤트
       document.querySelectorAll('.suggested-keyword-chip').forEach(chip => {
         chip.addEventListener('click', () => {
-          const keywords = chip.dataset.keywords;
-          const input = document.getElementById('qInput');
-          input.value = keywords;
-          
-          // 검색 버튼 클릭
+          document.getElementById('qInput').value = chip.dataset.keywords;
           document.getElementById('btnSearch').click();
         });
       });
