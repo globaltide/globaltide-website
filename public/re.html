@@ -3,41 +3,562 @@
 <head>
   <meta charset="utf-8" />
   <title>Real Estate | GlobalTide</title>
+
   <script defer src="/nav-top.js"></script>
   <script defer src="/nav-bottom.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    body{margin:0;font-family:-apple-system;background:#0b1020;color:#e5e7eb}
-    main{max-width:1100px;margin:0 auto;padding:24px 14px;
-      padding-top:calc(var(--gt-topnav-h,56px)+20px);
-      padding-bottom:calc(var(--gt-bottomnav-h,64px)+20px)}
-    .card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
-      border-radius:14px;padding:14px;margin-top:14px}
-  </style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #0b1020;
+      color: #e5e7eb;
+    }
 
-  <script>
-    fetch("/.netlify/functions/re")
-      .then(r=>r.json())
-      .then(d=>{
-        d.strategies.forEach((s,i)=>{
-          const id="re"+i;
-          document.getElementById("main").insertAdjacentHTML("beforeend",
-            `<div class="card"><h3>${s.strategy} (${s.category})</h3>
-             <canvas id="${id}"></canvas></div>`
-          );
-          new Chart(document.getElementById(id),{
-            type:"line",
-            data:{labels:(s.irrHistory||s.yieldHistory).map(x=>x.date),
-              datasets:[{label:"Return %",data:(s.irrHistory||s.yieldHistory).map(x=>x.value)}]}
-          });
-        });
-      });
-  </script>
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 14px;
+      padding-top: calc(var(--gt-topnav-h, 56px) + 20px);
+      padding-bottom: calc(var(--gt-bottomnav-h, 64px) + 20px);
+    }
+
+    h1 {
+      color: #fff;
+      font-size: 2rem;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, .05);
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 14px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+
+    .section-title {
+      color: #fff;
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+    }
+
+    .chart-description {
+      color: #9ca3af;
+      line-height: 1.6;
+      margin-bottom: 15px;
+      padding: 12px;
+      background: rgba(255, 255, 255, .03);
+      border-radius: 8px;
+      border-left: 3px solid #6366f1;
+      font-size: 0.95rem;
+    }
+
+    .metric-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 10px 0 15px 0;
+    }
+
+    .metric-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    .subtle-badge {
+      display: inline-block;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      color: #e5e7eb;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin: 10px 0 10px 0;
+    }
+
+    select {
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .14);
+      color: #e5e7eb;
+      padding: 10px 12px;
+      border-radius: 10px;
+      outline: none;
+      font-size: 0.95rem;
+      max-width: 100%;
+    }
+
+    option {
+      background: #0b1020;
+      color: #e5e7eb;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      height: 280px;
+      margin-top: 12px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 30px;
+      color: #9ca3af;
+      font-size: 1rem;
+    }
+
+    .error {
+      color: #ef4444;
+      padding: 15px;
+      background: rgba(239, 68, 68, 0.1);
+      border-radius: 8px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .item {
+      grid-column: span 6;
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 12px;
+      background: rgba(255,255,255,.02);
+      transition: all .2s ease;
+    }
+
+    .item:hover {
+      background: rgba(255,255,255,.05);
+      border-color: rgba(99, 102, 241, 0.7);
+      transform: translateY(-1px);
+    }
+
+    .item-title {
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.05rem;
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+
+    .item-meta {
+      color: #9ca3af;
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+    }
+
+    .item-box {
+      color: #cbd5e1;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .divider {
+      height: 1px;
+      background: rgba(255,255,255,.10);
+      margin: 14px 0;
+    }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 1.6rem; }
+      .chart-wrapper { height: 240px; }
+      .card { padding: 15px; }
+      .item { grid-column: span 12; }
+    }
+  </style>
 </head>
+
 <body>
-<main id="main">
+<main>
   <h1>Real Estate Market</h1>
+
+  <!-- Market Overview + Chart -->
+  <div class="card">
+    <h2 class="section-title">Real Estate Market Overview</h2>
+
+    <div class="chart-description">
+      <strong>이 페이지의 의미:</strong>
+      Real Estate는 임대료/공실률(현금흐름)과 금리/캡레이트(밸류에이션) 변화에 민감합니다.
+      아래 차트는 전략별 Return(예: IRR 또는 Yield) 흐름을 보여주고, 전략 카테고리별로 시장 구성을 요약합니다.
+      (데이터에 따라 IRR 또는 Yield가 들어올 수 있어, 이 페이지는 “Return %”로 통일 표시합니다.)
+    </div>
+
+    <div class="metric-row" id="metricRow">
+      <span class="metric-badge">Loading...</span>
+    </div>
+
+    <div class="chart-description" id="metricMeaning" style="display:none;">
+      <strong>지표 해석:</strong>
+      평균 Return은 각 전략의 최신(가장 최근 날짜) 값을 기준으로 계산합니다.
+      “상승/하락”은 동일 전략의 최근 구간 변화(초기값 대비 최신값)를 단순 비교한 방향성입니다.
+      (데이터 포인트 수가 적거나 누락되면 해당 전략은 집계에서 제외될 수 있습니다.)
+    </div>
+
+    <div class="controls">
+      <span style="color:#9ca3af;font-size:0.95rem;">차트 전략 선택</span>
+      <select id="strategySelect" aria-label="strategy select">
+        <option>Loading...</option>
+      </select>
+      <span id="selectedMeta" class="subtle-badge" style="display:none;"></span>
+    </div>
+
+    <div class="chart-wrapper">
+      <canvas id="returnChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Key Categories -->
+  <div class="card">
+    <h2 class="section-title">Key Categories</h2>
+    <div class="chart-description">
+      <strong>카테고리 요약:</strong>
+      전략의 category(예: Core, Core+, Value-add, Opportunistic, Debt 등)를 집계하여
+      시장에서 어떤 스타일이 상대적으로 많이 관찰되는지 보여줍니다.
+    </div>
+    <div id="categoriesContainer">
+      <div class="loading">카테고리 요약을 불러오는 중...</div>
+    </div>
+  </div>
+
+  <!-- Strategy List -->
+  <div class="card">
+    <h2 class="section-title">Strategies</h2>
+    <div class="chart-description">
+      <strong>전략별 한 줄 요약:</strong>
+      전략명/카테고리와 함께 최신 Return 및 사용된 지표(IRR/Yield)를 한 번에 볼 수 있게 구성했습니다.
+    </div>
+    <div id="strategyList">
+      <div class="loading">전략 목록을 불러오는 중...</div>
+    </div>
+  </div>
 </main>
+
+<script>
+  let returnChart = null;
+
+  function safeNumber(n) {
+    const x = Number(n);
+    return Number.isFinite(x) ? x : null;
+  }
+
+  function fmtPct(n, digits=2) {
+    const x = safeNumber(n);
+    if (x === null) return '-';
+    return `${x.toFixed(digits)}%`;
+  }
+
+  function normalizeHistory(strategy) {
+    // 기존 코드: (s.irrHistory||s.yieldHistory)
+    // 여기에 여러 키 가능성까지 흡수
+    const h =
+      (Array.isArray(strategy.irrHistory) && strategy.irrHistory) ||
+      (Array.isArray(strategy.yieldHistory) && strategy.yieldHistory) ||
+      (Array.isArray(strategy.returnHistory) && strategy.returnHistory) ||
+      (Array.isArray(strategy.history) && strategy.history) ||
+      [];
+
+    return h.filter(x => x && x.date != null && x.value != null)
+            .sort((a,b) => String(a.date).localeCompare(String(b.date)));
+  }
+
+  function historyType(strategy) {
+    if (Array.isArray(strategy.irrHistory)) return 'IRR';
+    if (Array.isArray(strategy.yieldHistory)) return 'Yield';
+    if (Array.isArray(strategy.returnHistory)) return 'Return';
+    return 'Return';
+  }
+
+  function getLatestValue(sortedHistory) {
+    if (!Array.isArray(sortedHistory) || sortedHistory.length === 0) return null;
+    return safeNumber(sortedHistory[sortedHistory.length - 1].value);
+  }
+
+  function getDeltaDirection(sortedHistory) {
+    if (!Array.isArray(sortedHistory) || sortedHistory.length < 2) return null;
+    const first = safeNumber(sortedHistory[0].value);
+    const last = safeNumber(sortedHistory[sortedHistory.length - 1].value);
+    if (first === null || last === null) return null;
+    if (last > first) return 'up';
+    if (last < first) return 'down';
+    return 'flat';
+  }
+
+  function computeOverview(strategies) {
+    const latestValues = [];
+    let up = 0, down = 0, flat = 0;
+
+    strategies.forEach(s => {
+      const hist = normalizeHistory(s);
+      const latest = getLatestValue(hist);
+      if (latest !== null) latestValues.push(latest);
+
+      const dir = getDeltaDirection(hist);
+      if (dir === 'up') up++;
+      else if (dir === 'down') down++;
+      else if (dir === 'flat') flat++;
+    });
+
+    const avg = latestValues.length
+      ? latestValues.reduce((a,b)=>a+b,0) / latestValues.length
+      : null;
+
+    const best = latestValues.length ? Math.max(...latestValues) : null;
+    const worst = latestValues.length ? Math.min(...latestValues) : null;
+
+    return {
+      totalStrategies: strategies.length,
+      avgLatest: avg,
+      bestLatest: best,
+      worstLatest: worst,
+      dirCounts: { up, down, flat },
+      includedInAvg: latestValues.length
+    };
+  }
+
+  function buildCategorySummary(strategies) {
+    const freq = new Map();
+    strategies.forEach(s => {
+      const key = String(s.category ?? s.type ?? s.style ?? 'N/A').trim() || 'N/A';
+      freq.set(key, (freq.get(key) || 0) + 1);
+    });
+    const sorted = [...freq.entries()].sort((a,b) => b[1] - a[1]);
+    return sorted.slice(0, 12).map(([category, count]) => ({ category, count }));
+  }
+
+  function renderBadges(ov) {
+    const metricRow = document.getElementById('metricRow');
+    metricRow.innerHTML = `
+      <span class="metric-badge">Strategies: ${ov.totalStrategies}</span>
+      <span class="subtle-badge">Avg Latest Return: ${fmtPct(ov.avgLatest)}</span>
+      <span class="subtle-badge">Best: ${fmtPct(ov.bestLatest)}</span>
+      <span class="subtle-badge">Worst: ${fmtPct(ov.worstLatest)}</span>
+      <span class="subtle-badge">Trend: ↑ ${ov.dirCounts.up} · ↓ ${ov.dirCounts.down} · → ${ov.dirCounts.flat}</span>
+    `;
+    document.getElementById('metricMeaning').style.display = 'block';
+  }
+
+  function populateSelect(strategies) {
+    const sel = document.getElementById('strategySelect');
+    sel.innerHTML = '';
+
+    strategies.forEach((s, idx) => {
+      const opt = document.createElement('option');
+      opt.value = String(idx);
+      const cat = (s.category ?? s.type ?? 'N/A');
+      opt.textContent = `${s.strategy || 'Strategy'} (${cat})`;
+      sel.appendChild(opt);
+    });
+
+    sel.addEventListener('change', () => {
+      const i = Number(sel.value);
+      const s = strategies[i];
+      renderSelectedMeta(s);
+      renderReturnChart(s);
+    });
+  }
+
+  function renderSelectedMeta(s) {
+    const meta = document.getElementById('selectedMeta');
+    const hist = normalizeHistory(s);
+    const latest = getLatestValue(hist);
+    const dir = getDeltaDirection(hist);
+    const arrow = dir === 'up' ? '↑' : dir === 'down' ? '↓' : dir === 'flat' ? '→' : '-';
+    const kind = historyType(s);
+    meta.textContent = `Latest ${kind}: ${fmtPct(latest)}  ${arrow}`;
+    meta.style.display = 'inline-block';
+  }
+
+  function renderReturnChart(strategy) {
+    const canvas = document.getElementById('returnChart');
+    const ctx = canvas.getContext('2d');
+
+    const hist = normalizeHistory(strategy);
+    const labels = hist.map(x => x.date);
+    const values = hist.map(x => safeNumber(x.value));
+    const kind = historyType(strategy);
+
+    if (returnChart) returnChart.destroy();
+
+    returnChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: `${kind} %`,
+          data: values,
+          borderColor: 'rgba(99, 102, 241, 1)',
+          backgroundColor: 'rgba(99, 102, 241, 0.15)',
+          borderWidth: 2,
+          tension: 0.25,
+          pointRadius: 2,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: { color: '#e5e7eb' }
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: ${fmtPct(ctx.raw, 2)}`
+            }
+          }
+        },
+        scales: {
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+            ticks: { color: '#9ca3af' }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: '#9ca3af', maxRotation: 0, autoSkip: true }
+          }
+        }
+      }
+    });
+  }
+
+  function renderCategories(summary) {
+    const c = document.getElementById('categoriesContainer');
+
+    if (!summary.length) {
+      c.innerHTML = `<div class="chart-description">표시할 category 데이터가 없습니다.</div>`;
+      return;
+    }
+
+    const pills = summary.map(x => `
+      <span class="subtle-badge" style="border-color: rgba(99,102,241,.35);">
+        ${x.category} · ${x.count}
+      </span>
+    `).join('');
+
+    c.innerHTML = `
+      <div class="metric-row" style="margin-top:0;">${pills}</div>
+      <div class="divider"></div>
+      <div class="chart-description" style="margin-bottom:0;">
+        <strong>해석 팁:</strong>
+        count는 해당 category가 몇 개 전략에서 관찰되는지(빈도)입니다.
+        예를 들어 Debt 비중이 높으면 “금리/리파이낸싱/크레딧 스프레드”가 성과를 좌우하는 구간일 수 있고,
+        Core/Value-add 비중이 높으면 “임대/리노베이션/리싱” 드라이버가 중요해질 수 있습니다.
+      </div>
+    `;
+  }
+
+  function renderStrategyList(strategies) {
+    const list = document.getElementById('strategyList');
+
+    if (!strategies.length) {
+      list.innerHTML = `<div class="chart-description">표시할 전략이 없습니다.</div>`;
+      return;
+    }
+
+    list.innerHTML = `
+      <div class="grid">
+        ${strategies.map(s => {
+          const cat = (s.category ?? s.type ?? s.style ?? 'N/A');
+          const hist = normalizeHistory(s);
+          const latest = getLatestValue(hist);
+          const dir = getDeltaDirection(hist);
+          const arrow = dir === 'up' ? '↑' : dir === 'down' ? '↓' : dir === 'flat' ? '→' : '-';
+          const kind = historyType(s);
+          return `
+            <div class="item">
+              <div class="item-title">${s.strategy || 'Strategy'} <span style="color:#9ca3af;font-weight:600;">(${cat})</span></div>
+              <div class="item-meta">Latest ${kind}: <strong style="color:#fff;">${fmtPct(latest)}</strong> <span style="color:#9ca3af;">${arrow}</span></div>
+              <div class="item-box">
+                <strong style="color:#e5e7eb;">Category:</strong> ${cat}<br/>
+                <strong style="color:#e5e7eb;">Metric:</strong> ${kind}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  function normalizeStrategies(data) {
+    const strategies = Array.isArray(data?.strategies) ? data.strategies
+      : Array.isArray(data?.data?.strategies) ? data.data.strategies
+      : Array.isArray(data?.items) ? data.items
+      : [];
+
+    return strategies.map(s => ({
+      strategy: s.strategy ?? s.name ?? 'Strategy',
+      category: s.category ?? s.type ?? s.style ?? 'N/A',
+      irrHistory: Array.isArray(s.irrHistory) ? s.irrHistory : null,
+      yieldHistory: Array.isArray(s.yieldHistory) ? s.yieldHistory : null,
+      returnHistory: Array.isArray(s.returnHistory) ? s.returnHistory : null,
+      history: Array.isArray(s.history) ? s.history : null
+    }));
+  }
+
+  async function loadData() {
+    try {
+      const response = await fetch('/.netlify/functions/re');
+      const data = await response.json();
+
+      const strategies = normalizeStrategies(data);
+
+      if (!strategies.length) {
+        document.getElementById('metricRow').innerHTML = `<span class="subtle-badge">No data</span>`;
+        document.getElementById('categoriesContainer').innerHTML = `<div class="chart-description">RE 데이터가 비어있습니다.</div>`;
+        document.getElementById('strategyList').innerHTML = `<div class="chart-description">RE 데이터가 비어있습니다.</div>`;
+        return;
+      }
+
+      // Overview badges
+      const ov = computeOverview(strategies);
+      renderBadges(ov);
+
+      // Select + default chart
+      populateSelect(strategies);
+      renderSelectedMeta(strategies[0]);
+      renderReturnChart(strategies[0]);
+
+      // Categories summary
+      const summary = buildCategorySummary(strategies);
+      renderCategories(summary);
+
+      // Strategy list
+      renderStrategyList(strategies);
+
+    } catch (error) {
+      console.error('Error loading data:', error);
+      document.getElementById('metricRow').innerHTML = `<span class="metric-badge">Error</span>`;
+      document.getElementById('categoriesContainer').innerHTML = `<div class="error">데이터를 불러오는 중 오류가 발생했습니다.</div>`;
+      document.getElementById('strategyList').innerHTML = `<div class="error">데이터를 불러오는 중 오류가 발생했습니다.</div>`;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadData);
+</script>
 </body>
 </html>
