@@ -13,17 +13,18 @@ function setAuthButtons(user){
   const btnLogout = $("btnLogout");
   if (!btnLogin || !btnLogout) return;
 
-  if (user){
-    btnLogin.style.display = "none";
-    btnLogout.style.display = "inline-block";
-  }else{
-    btnLogin.style.display = "inline-block";
-    btnLogout.style.display = "none";
-  }
+  btnLogin.style.display = user ? "none" : "inline-block";
+  btnLogout.style.display = user ? "inline-block" : "none";
+}
+
+function findDateButtonsContainer(){
+  // search.html 구조에 맞춰 “검색 기간” 섹션 안에서 찾아봄
+  const section = document.querySelector(".date-filter-section");
+  return section ? section.querySelector(".date-filter-buttons") : null;
 }
 
 function getActivePeriod(){
-  const wrap = document.getElementById("dateButtons");
+  const wrap = findDateButtonsContainer();
   const active = wrap?.querySelector(".date-btn.active");
   return active?.getAttribute("data-period") || "all";
 }
@@ -53,7 +54,6 @@ function applyPeriodToDates(period){
 }
 
 async function main(){
-  // DOM
   const qInput = $("qInput");
   const btnSearch = $("btnSearch");
   const btnExportXlsx = $("btnExportXlsx");
@@ -66,18 +66,15 @@ async function main(){
     return;
   }
 
-  // Supabase
   const client = createSupabaseClient();
   let currentUser = await getSessionUser(client);
   setAuthButtons(currentUser);
 
-  // ✅ default end date set
+  // default dates
   applyPeriodToDates(getActivePeriod());
 
-  // ---- keyword panel toggle ----
   showKwPanel(false);
 
-  // bind keyword chip click -> put into search input and search
   bindKeywordUIHandlers({
     client,
     getUser: () => currentUser,
@@ -90,13 +87,9 @@ async function main(){
     }
   });
 
-  // ---- auth buttons ----
   $("btnLogin")?.addEventListener("click", async () => {
-    try{
-      await signInGoogle(client);
-    }catch(e){
-      showError("로그인에 실패했습니다.", e?.message || String(e));
-    }
+    try{ await signInGoogle(client); }
+    catch(e){ showError("로그인에 실패했습니다.", e?.message || String(e)); }
   });
 
   $("btnLogout")?.addEventListener("click", async () => {
@@ -111,30 +104,24 @@ async function main(){
     }
   });
 
-  // auth state change
   client.auth.onAuthStateChange(async () => {
     currentUser = await getSessionUser(client);
     setAuthButtons(currentUser);
 
-    // 키워드 패널이 열려 있으면 목록 갱신
     const kwPanel = $("kwPanel");
     if (kwPanel && kwPanel.style.display === "block" && currentUser){
       $("kwUserLine").innerHTML = `현재 로그인: <b>${currentUser.email || ""}</b>`;
       await loadMyKeywords(client, currentUser);
+      if (btnExportXlsx) btnExportXlsx.style.display = "inline-block";
     }
     if (!currentUser) showKwPanel(false);
   });
 
-  // keyword manage open/close
   btnKeywordManage?.addEventListener("click", async () => {
     currentUser = await getSessionUser(client);
     if (!currentUser){
-      // 로그인 유도
-      try{
-        await signInGoogle(client);
-      }catch(e){
-        showError("로그인이 필요합니다.", e?.message || String(e));
-      }
+      try{ await signInGoogle(client); }
+      catch(e){ showError("로그인이 필요합니다.", e?.message || String(e)); }
       return;
     }
 
@@ -145,10 +132,10 @@ async function main(){
     if (!open){
       $("kwUserLine").innerHTML = `현재 로그인: <b>${currentUser.email || ""}</b>`;
       await loadMyKeywords(client, currentUser);
+      if (btnExportXlsx) btnExportXlsx.style.display = "inline-block";
     }
   });
 
-  // add keyword
   kwAddBtn?.addEventListener("click", async () => {
     currentUser = await getSessionUser(client);
     const ok = await addKeyword(client, currentUser, kwInput?.value || "");
@@ -158,20 +145,21 @@ async function main(){
       setStatus("키워드가 추가되었습니다.");
     }
   });
-  kwInput?.addEventListener("keydown", async (e) => {
+  kwInput?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") kwAddBtn?.click();
   });
 
-  // date buttons behavior (set date inputs)
-  const dateButtons = $("dateButtons");
+  // date buttons click
+  const dateButtons = findDateButtonsContainer();
   dateButtons?.addEventListener("click", (e) => {
     const btn = e.target.closest(".date-btn");
     if (!btn) return;
+    dateButtons.querySelectorAll(".date-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
     const period = btn.getAttribute("data-period") || "all";
     applyPeriodToDates(period);
   });
 
-  // ---- search state ----
   let lastItems = [];
   let lastQuery = "";
 
@@ -185,7 +173,6 @@ async function main(){
     setLoading();
     lastQuery = q;
 
-    // ✅ 날짜 UI 값은 일단 meta로만 표시 (서버가 기간 지원하면 여기서 params로 붙이면 됨)
     const s = $("startDate")?.value || "";
     const e = $("endDate")?.value || "";
     const metaDate = (s || e) ? ` · 기간: ${s || "전체"} ~ ${e || "오늘"}` : "";
@@ -196,19 +183,13 @@ async function main(){
 
       renderItems(items, `검색어: ${q} · 총 ${items.length}개${metaDate}`);
 
-      // Excel 버튼: 결과가 있으면 보여줌 (kwPanel 안에 있으니 패널 열 때 보임)
       if (btnExportXlsx){
         btnExportXlsx.style.display = items.length ? "inline-block" : "none";
       }
     }catch(e){
       lastItems = [];
       if (btnExportXlsx) btnExportXlsx.style.display = "none";
-
-      // ✅ 화면에는 친절하게
-      showError(
-        "검색에 실패했습니다. 잠시 후 다시 시도해 주세요.",
-        e?.message || String(e)
-      );
+      showError("검색에 실패했습니다. 잠시 후 다시 시도해 주세요.", e?.message || String(e));
       setStatus(`검색어: ${q} · 실패`);
     }
   }
@@ -218,7 +199,6 @@ async function main(){
     if (e.key === "Enter") runSearch();
   });
 
-  // Excel export (no snippet)
   btnExportXlsx?.addEventListener("click", () => {
     try{
       if (!lastItems.length){
