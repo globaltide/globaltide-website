@@ -22,12 +22,16 @@ const els = {
   status: $("status"),
   posts: $("posts"),
   errbox: $("errbox"),
+  
+  startDate: $("startDate"),
+  endDate: $("endDate"),
 };
 
 let currentUser = null;
 let activeUserKeyword = null;
 let lastQuery = "";
 let lastItems = [];
+let dateFilter = { start: null, end: null };
 
 function setStatus(text){
   els.status.textContent = text || "";
@@ -44,7 +48,6 @@ function safeFileName(s){
     .slice(0, 80);
 }
 
-// 서울 기준 날짜
 function todayKst(){
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Seoul",
@@ -76,6 +79,59 @@ function exportToXlsx(){
   XLSX.writeFile(wb, fname);
 }
 
+// 날짜 기간 계산
+function calculateDateRange(period) {
+  const end = new Date();
+  let start = new Date();
+  
+  switch(period) {
+    case '1m':
+      start.setMonth(start.getMonth() - 1);
+      break;
+    case '3m':
+      start.setMonth(start.getMonth() - 3);
+      break;
+    case '6m':
+      start.setMonth(start.getMonth() - 6);
+      break;
+    case '1y':
+      start.setFullYear(start.getFullYear() - 1);
+      break;
+    case 'all':
+      return { start: null, end: null };
+  }
+  
+  return {
+    start: start.toISOString().split('T')[0],
+    end: end.toISOString().split('T')[0]
+  };
+}
+
+// 날짜 필터 적용
+function filterByDate(items, startDate, endDate) {
+  if (!startDate && !endDate) return items;
+  
+  return items.filter(item => {
+    if (!item.date) return true;
+    
+    const itemDate = new Date(item.date);
+    if (isNaN(itemDate.getTime())) return true;
+    
+    if (startDate) {
+      const start = new Date(startDate);
+      if (itemDate < start) return false;
+    }
+    
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59);
+      if (itemDate > end) return false;
+    }
+    
+    return true;
+  });
+}
+
 async function runSearch(query){
   showError("");
   const q = (query || "").trim();
@@ -88,13 +144,25 @@ async function runSearch(query){
   els.posts.innerHTML = `<div class="meta">검색 중...</div>`;
 
   try{
-    const items = await searchNews(q);
-    lastItems = items;
+    const allItems = await searchNews(q);
+    
+    // 날짜 필터 적용
+    const filteredItems = filterByDate(
+      allItems, 
+      dateFilter.start, 
+      dateFilter.end
+    );
+    
+    lastItems = filteredItems;
 
-    renderPosts(els.posts, items);
-    setStatus(`검색어: ${q} · ${items.length}개`);
+    renderPosts(els.posts, filteredItems);
+    
+    const dateInfo = dateFilter.start || dateFilter.end 
+      ? ` · 기간: ${dateFilter.start || '시작'} ~ ${dateFilter.end || '종료'}` 
+      : '';
+    setStatus(`검색어: ${q}${dateInfo} · ${filteredItems.length}개`);
 
-    setVisible(els.btnExportXlsx, items.length > 0);
+    setVisible(els.btnExportXlsx, filteredItems.length > 0);
   }catch(e){
     const msg = e?.message || String(e);
     showError(msg);
@@ -143,6 +211,43 @@ function bindEvents(){
     els.qInput.value = chip.dataset.kw;
     await runSearch(chip.dataset.kw);
   });
+  
+  // 날짜 프리셋 버튼
+  document.querySelectorAll('.date-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      // 버튼 active 상태 변경
+      document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      const period = btn.dataset.period;
+      const range = calculateDateRange(period);
+      
+      dateFilter.start = range.start;
+      dateFilter.end = range.end;
+      
+      // 입력 필드 업데이트
+      els.startDate.value = range.start || '';
+      els.endDate.value = range.end || '';
+      
+      // 검색어가 있으면 자동 재검색
+      if (lastQuery) {
+        runSearch(lastQuery);
+      }
+    });
+  });
+  
+  // 수동 날짜 입력
+  els.startDate.addEventListener('change', () => {
+    dateFilter.start = els.startDate.value;
+    document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+    if (lastQuery) runSearch(lastQuery);
+  });
+  
+  els.endDate.addEventListener('change', () => {
+    dateFilter.end = els.endDate.value;
+    document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+    if (lastQuery) runSearch(lastQuery);
+  });
 }
 
 async function init(){
@@ -150,6 +255,9 @@ async function init(){
   currentUser = await getSessionUser();
   setVisible(els.btnLogin, !currentUser);
   setVisible(els.btnLogout, !!currentUser);
+  
+  // 기본 종료일을 오늘로 설정
+  els.endDate.value = todayKst();
 }
 
 init();
