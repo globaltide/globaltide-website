@@ -1,4 +1,3 @@
-```html
 <!doctype html>
 <html lang="ko">
 <head>
@@ -7,6 +6,7 @@
 
   <script defer src="/nav-top.js"></script>
   <script defer src="/nav-bottom.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
     body {
@@ -69,7 +69,7 @@
       color: white;
       padding: 8px 14px;
       border-radius: 20px;
-      font-weight: 600;
+      font-weight: 700;
       font-size: 0.9rem;
       white-space: nowrap;
     }
@@ -81,74 +81,15 @@
       color: #e5e7eb;
       padding: 8px 14px;
       border-radius: 20px;
-      font-weight: 600;
+      font-weight: 650;
       font-size: 0.9rem;
       white-space: nowrap;
     }
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(12, 1fr);
-      gap: 12px;
+    .chart-wrapper {
+      position: relative;
+      height: 280px;
       margin-top: 12px;
-    }
-
-    .item {
-      grid-column: span 6;
-      padding: 14px;
-      border: 1px solid rgba(255,255,255,.10);
-      border-radius: 12px;
-      background: rgba(255,255,255,.02);
-      transition: all .2s ease;
-    }
-
-    .item:hover {
-      background: rgba(255,255,255,.05);
-      border-color: rgba(99, 102, 241, 0.7);
-      transform: translateY(-1px);
-    }
-
-    .item-title {
-      color: #fff;
-      font-weight: 800;
-      font-size: 1.05rem;
-      margin-bottom: 6px;
-      line-height: 1.3;
-    }
-
-    .item-meta {
-      color: #9ca3af;
-      font-size: 0.88rem;
-      margin-bottom: 8px;
-      line-height: 1.45;
-    }
-
-    .item-box {
-      color: #cbd5e1;
-      font-size: 0.92rem;
-      line-height: 1.55;
-      background: rgba(255,255,255,.03);
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: 10px;
-      padding: 10px 12px;
-      word-break: break-word;
-    }
-
-    .divider {
-      height: 1px;
-      background: rgba(255,255,255,.10);
-      margin: 14px 0;
-    }
-
-    a {
-      color: #93c5fd;
-      text-decoration: none;
-      font-weight: 600;
-    }
-
-    a:hover {
-      text-decoration: underline;
-      color: #bfdbfe;
     }
 
     .loading {
@@ -165,7 +106,18 @@
       border-radius: 8px;
     }
 
-    .news-item {
+    a {
+      color: #93c5fd;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    a:hover {
+      text-decoration: underline;
+      color: #bfdbfe;
+    }
+
+    .list-item {
       padding: 12px;
       margin-bottom: 8px;
       border: 1px solid rgba(255, 255, 255, .1);
@@ -174,30 +126,31 @@
       background: rgba(255, 255, 255, .02);
     }
 
-    .news-item:hover {
+    .list-item:hover {
       background: rgba(255, 255, 255, .05);
       border-color: #6366f1;
       transform: translateX(3px);
     }
 
-    .news-title {
-      font-weight: 700;
+    .list-title {
+      font-weight: 800;
       color: #fff;
-      font-size: 0.98rem;
-      margin-bottom: 6px;
+      font-size: 1rem;
+      margin-bottom: 5px;
       line-height: 1.35;
     }
 
-    .news-meta {
+    .list-meta {
       color: #9ca3af;
-      font-size: 0.85rem;
-      line-height: 1.35;
+      font-size: 0.88rem;
+      line-height: 1.4;
+      word-break: break-word;
     }
 
     @media (max-width: 768px) {
       h1 { font-size: 1.6rem; }
+      .chart-wrapper { height: 240px; }
       .card { padding: 15px; }
-      .item { grid-column: span 12; }
     }
   </style>
 </head>
@@ -206,18 +159,15 @@
 <main>
   <h1>Interval Funds & Open-End Alternatives</h1>
 
-  <!-- Overview -->
+  <!-- Market Overview -->
   <div class="card">
     <h2 class="section-title">Market Overview</h2>
 
     <div class="chart-description">
       <strong>이 페이지의 의미:</strong>
-      Interval Fund는 “open-end 구조”를 유지하면서도, 투자자 환매를 매일 열어두지 않고
-      정해진 주기(예: 분기/월)와 한도(예: NAV의 일정 %)로만 환매를 제공하는 형태입니다.
-      즉, 사모자산(Private Credit/Real Estate/PE 성격의 자산 등)을 담으면서도
-      리테일/어드바이저 채널에서 운용 가능한 ‘반-유동성’ 상품으로 활용됩니다.
-      아래는 API에서 내려주는 통계(Statistics), 관련 뉴스, 리서치(Whitepapers)를
-      “한 눈에 읽히는 카드형 대시보드”로 정리한 화면입니다.
+      Interval Fund는 open-end 구조를 유지하면서도, 환매를 “매일”이 아니라 “정해진 주기와 한도”로 제공하는 상품입니다.
+      비유동 자산(Private Credit/Real Estate 등)을 담되, 판매채널(리테일/RIA)에서 운용 가능한 형태로 설계되는 경우가 많습니다.
+      아래는 수익률(또는 Return) 흐름과 핵심 통계, 관련 뉴스, 리서치 자료를 한 화면에서 볼 수 있게 구성했습니다.
     </div>
 
     <div class="metric-row" id="metricRow">
@@ -225,35 +175,47 @@
     </div>
 
     <div class="chart-description" id="metricMeaning" style="display:none;">
-      <strong>지표 해석 가이드:</strong>
-      Statistics는 소스/API 정의에 따라 의미가 다를 수 있습니다.
-      일반적으로는 AUM, Fund Count, Distribution Channel, Redemption Terms,
-      Credit/RE 비중 등 “open-end 대체상품의 확장성”을 보여주는 지표들이 핵심입니다.
+      <strong>지표 해석:</strong>
+      Statistics는 API 정의에 따라 AUM, 펀드 수, 환매조건, 채널 등 다양한 의미를 가질 수 있습니다.
+      이 페이지는 “있는 데이터를 최대한 보기 좋게” 요약 표시합니다.
     </div>
   </div>
 
-  <!-- Key Takeaways (derived) -->
+  <!-- Return Chart -->
   <div class="card">
-    <h2 class="section-title">Key Takeaways</h2>
-    <div class="chart-description">
-      <strong>Interval Fund를 보는 핵심 포인트:</strong>
-      아래 항목은 공통적으로 LP/판매채널이 확인하는 체크리스트 성격입니다.
-      (데이터 기반 요약 + 구조적 해석을 함께 제공합니다.)
+    <h2 class="section-title">Return Overview</h2>
+
+    <div class="chart-description" id="returnMeaning">
+      <strong>이 차트의 의미:</strong>
+      Interval Fund / Open-end 대체상품의 수익률(또는 Yield/Performance) 히스토리를 표시합니다.
+      API 응답에 returnHistory / yieldHistory / performanceHistory / navHistory 중 하나가 존재하면 자동으로 차트를 구성합니다.
     </div>
 
-    <div class="grid" id="takeawaysGrid">
-      <div class="loading">요약을 구성하는 중...</div>
+    <div class="metric-row" id="returnBadges">
+      <span class="subtle-badge">Loading...</span>
+    </div>
+
+    <div class="chart-wrapper">
+      <canvas id="returnChart"></canvas>
+    </div>
+
+    <div id="returnFallback" class="chart-description" style="display:none;">
+      현재 interval API 응답에 수익률 히스토리 데이터가 없습니다.
+      (interval 함수에서 returnHistory 같은 배열을 내려주면 자동으로 차트가 표시됩니다.)
+    </div>
+  </div>
+
+  <!-- Statistics -->
+  <div class="card">
+    <h2 class="section-title">Statistics</h2>
+    <div id="statsContainer">
+      <div class="loading">통계를 불러오는 중...</div>
     </div>
   </div>
 
   <!-- Related News -->
   <div class="card">
     <h2 class="section-title">Related News</h2>
-    <div class="chart-description">
-      <strong>최근 흐름 파악:</strong>
-      Interval Fund는 규제/판매채널/환매 이슈의 영향을 크게 받습니다.
-      아래 뉴스는 “시장 수요(판매) vs 유동성(환매) vs 포트폴리오 구성” 관점에서 읽는 것이 유용합니다.
-    </div>
     <div id="newsContainer">
       <div class="loading">관련 뉴스를 불러오는 중...</div>
     </div>
@@ -262,10 +224,6 @@
   <!-- Whitepapers -->
   <div class="card">
     <h2 class="section-title">Whitepapers & Research</h2>
-    <div class="chart-description">
-      <strong>리서치/레퍼런스:</strong>
-      판매자료/IC 메모 작성 시, 아래 문서들을 근거로 구조·유동성·밸류에이션/리스크를 정리할 수 있습니다.
-    </div>
     <div id="wpContainer">
       <div class="loading">화이트페이퍼를 불러오는 중...</div>
     </div>
@@ -273,22 +231,21 @@
 </main>
 
 <script>
-  function asArray(x) {
-    return Array.isArray(x) ? x : [];
-  }
+  let returnChart = null;
 
-  function asText(x) {
-    if (x === null || x === undefined) return '';
-    return String(x);
+  function asArray(x) { return Array.isArray(x) ? x : []; }
+  function safeNumber(n) {
+    const x = Number(n);
+    return Number.isFinite(x) ? x : null;
   }
-
-  function isUrlLike(s) {
-    const t = asText(s).trim();
-    return /^https?:\/\/\S+/i.test(t);
+  function fmtPct(n, digits=2) {
+    const x = safeNumber(n);
+    if (x === null) return '-';
+    return `${x.toFixed(digits)}%`;
   }
-
   function escapeHtml(str) {
-    return asText(str)
+    const s = String(str ?? '');
+    return s
       .replaceAll('&', '&amp;')
       .replaceAll('<', '&lt;')
       .replaceAll('>', '&gt;')
@@ -296,98 +253,148 @@
       .replaceAll("'", '&#039;');
   }
 
-  function renderStats(stats) {
-    const row = document.getElementById('metricRow');
-    const list = asArray(stats);
+  function pickReturnSeries(d) {
+    // 가능한 필드명들을 최대한 흡수
+    // 기대 형태: [{date:"2025-01", value: 8.3}, ...]
+    const candidates = [
+      d.returnHistory,
+      d.yieldHistory,
+      d.performanceHistory,
+      d.navHistory,
+      d.totalReturnHistory,
+      d.series
+    ].filter(Boolean);
 
-    if (!list.length) {
-      row.innerHTML = `<span class="subtle-badge">No stats</span>`;
+    for (const c of candidates) {
+      if (Array.isArray(c) && c.length) return { series: c, label: 'Return %' };
+    }
+
+    // stats 안에 history가 들어있는 경우도 방어
+    if (d.stats && typeof d.stats === 'object') {
+      const s = d.stats;
+      const nested = s.returnHistory || s.yieldHistory || s.performanceHistory || s.navHistory;
+      if (Array.isArray(nested) && nested.length) return { series: nested, label: 'Return %' };
+    }
+
+    // strategies 형태 (다른 페이지처럼)일 수도 있어서 방어
+    if (Array.isArray(d.strategies) && d.strategies.length) {
+      const s0 = d.strategies[0];
+      const h = s0.returnHistory || s0.yieldHistory || s0.performanceHistory || s0.navHistory;
+      if (Array.isArray(h) && h.length) return { series: h, label: 'Return %' };
+    }
+
+    return null;
+  }
+
+  function normalizeSeries(series) {
+    const cleaned = asArray(series)
+      .filter(x => x && x.date != null && x.value != null)
+      .map(x => ({ date: String(x.date), value: safeNumber(x.value) }))
+      .filter(x => x.value !== null)
+      .sort((a,b) => a.date.localeCompare(b.date));
+    return cleaned;
+  }
+
+  function renderReturnChart(seriesObj) {
+    const badges = document.getElementById('returnBadges');
+
+    if (!seriesObj) {
+      badges.innerHTML = `<span class="subtle-badge">No return history</span>`;
+      document.getElementById('returnFallback').style.display = 'block';
+      if (returnChart) { returnChart.destroy(); returnChart = null; }
       return;
     }
 
-    // 상위 6개만 뱃지로 노출 (너무 길면 레이아웃 깨짐)
-    const top = list.slice(0, 6);
-
-    row.innerHTML = top.map(x => {
-      const label = escapeHtml(x.label ?? x.name ?? 'Stat');
-      const value = escapeHtml(x.value ?? x.val ?? '-');
-      return `<span class="metric-badge">${label}: ${value}</span>`;
-    }).join('');
-
-    document.getElementById('metricMeaning').style.display = 'block';
-  }
-
-  function inferKeyTakeaways(stats) {
-    // stats에 무엇이 들어오든 "open-end/interval 관점 체크포인트"를 고정 제공하되,
-    // stats 키워드가 있으면 더 구체적으로 코멘트
-    const raw = asArray(stats).map(x => `${asText(x.label)} ${asText(x.value)}`.toLowerCase()).join(' | ');
-
-    const hints = {
-      aum: /aum|assets under management|총자산|규모/.test(raw),
-      count: /fund count|# of funds|funds|개수|number/.test(raw),
-      redemption: /redeem|repurchase|quarter|monthly|% of nav|환매|리퍼체이스/.test(raw),
-      distribution: /advisor|ria|wirehouse|broker|distribution|판매|채널/.test(raw),
-      credit: /private credit|direct lending|loan|senior|clo|크레딧|대출/.test(raw),
-      realestate: /real estate|reit|property|부동산/.test(raw),
-      valuation: /valuation|nav|pricing|fair value|밸류|평가/.test(raw)
-    };
-
-    const cards = [
-      {
-        title: '유동성 구조 (Repurchase/Redemption)',
-        meta: hints.redemption ? 'Stats에서 환매/주기 키워드 감지' : '일반 체크포인트',
-        body:
-          '환매 주기(분기/월), 환매 한도(% of NAV), 게이트/프라레이션, 사이드포켓 가능성 등을 확인합니다. ' +
-          'open-end처럼 보이지만 실제로는 “예측 가능한 제한 유동성”이 핵심입니다.'
-      },
-      {
-        title: '포트폴리오 적합성 (자산-부채 매칭)',
-        meta: (hints.credit || hints.realestate) ? 'Credit/RE 키워드 감지' : '일반 체크포인트',
-        body:
-          'Private Credit/RE처럼 비유동 자산 비중이 높을수록, 환매 스트레스 시 현금화(또는 레버리지/라인) 의존도가 커집니다. ' +
-          '자산의 현금창출(쿠폰/임대료)과 환매 패턴이 맞는지가 핵심입니다.'
-      },
-      {
-        title: '밸류에이션 & NAV 신뢰도',
-        meta: hints.valuation ? 'Stats에서 NAV/평가 키워드 감지' : '일반 체크포인트',
-        body:
-          '일반적으로 매일 시가로 가격이 찍히지 않는 자산이 많기 때문에, 가격평가(Third-party pricing), ' +
-          '평가 빈도, 공정가치 정책, 레버리지 자산의 마진콜/리파이 위험 등을 봅니다.'
-      },
-      {
-        title: '판매채널/플로우 (RIA/브로커 등)',
-        meta: hints.distribution ? 'Stats에서 채널 키워드 감지' : '일반 체크포인트',
-        body:
-          'Interval Fund는 “판매(Subscriptions) 플로우”가 성과/운용 안정성에 영향을 줍니다. ' +
-          '채널 집중(특정 플랫폼 의존), 판매수수료 구조, 리테일 수요 둔화 시 리스크를 점검합니다.'
-      }
-    ];
-
-    // AUM/Count 힌트가 있으면 추가 카드
-    if (hints.aum || hints.count) {
-      cards.push({
-        title: '규모 & 성장의 의미',
-        meta: 'Stats 기반 해석',
-        body:
-          'AUM/펀드 수가 늘면 상품-채널 적합성이 확인된 신호일 수 있지만, 동시에 환매가 몰릴 때 운용 난이도도 커집니다. ' +
-          '성장률과 함께 “현금/라인/자산 유동화 가능성”이 같이 커졌는지 보는 게 중요합니다.'
-      });
+    const hist = normalizeSeries(seriesObj.series);
+    if (!hist.length) {
+      badges.innerHTML = `<span class="subtle-badge">No usable return history</span>`;
+      document.getElementById('returnFallback').style.display = 'block';
+      if (returnChart) { returnChart.destroy(); returnChart = null; }
+      return;
     }
 
-    return cards.slice(0, 6);
+    document.getElementById('returnFallback').style.display = 'none';
+
+    const first = hist[0].value;
+    const last = hist[hist.length - 1].value;
+    const dir = last > first ? '↑' : last < first ? '↓' : '→';
+
+    const best = Math.max(...hist.map(x => x.value));
+    const worst = Math.min(...hist.map(x => x.value));
+
+    badges.innerHTML = `
+      <span class="metric-badge">Latest: ${fmtPct(last)} ${dir}</span>
+      <span class="subtle-badge">Best: ${fmtPct(best)}</span>
+      <span class="subtle-badge">Worst: ${fmtPct(worst)}</span>
+      <span class="subtle-badge">Points: ${hist.length}</span>
+    `;
+
+    const ctx = document.getElementById('returnChart').getContext('2d');
+
+    if (returnChart) returnChart.destroy();
+
+    returnChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: hist.map(x => x.date),
+        datasets: [{
+          label: seriesObj.label || 'Return %',
+          data: hist.map(x => x.value),
+          borderColor: 'rgba(99, 102, 241, 1)',
+          backgroundColor: 'rgba(99, 102, 241, 0.15)',
+          borderWidth: 2,
+          tension: 0.25,
+          pointRadius: 2,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: { color: '#e5e7eb' }
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: ${fmtPct(ctx.raw, 2)}`
+            }
+          }
+        },
+        scales: {
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+            ticks: { color: '#9ca3af' }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: '#9ca3af', maxRotation: 0, autoSkip: true }
+          }
+        }
+      }
+    });
   }
 
-  function renderTakeaways(stats) {
-    const grid = document.getElementById('takeawaysGrid');
-    const cards = inferKeyTakeaways(stats);
+  function renderStats(stats) {
+    const c = document.getElementById('statsContainer');
+    const list = asArray(stats);
 
-    grid.innerHTML = cards.map(c => `
-      <div class="item">
-        <div class="item-title">${escapeHtml(c.title)}</div>
-        <div class="item-meta">${escapeHtml(c.meta)}</div>
-        <div class="item-box">${escapeHtml(c.body)}</div>
+    if (!list.length) {
+      c.innerHTML = `<div class="chart-description">표시할 통계가 없습니다.</div>`;
+      return;
+    }
+
+    c.innerHTML = `
+      <div class="metric-row" style="margin-top:0;">
+        ${list.slice(0, 16).map(x => {
+          const label = escapeHtml(x.label ?? x.name ?? 'Stat');
+          const value = escapeHtml(x.value ?? x.val ?? '-');
+          return `<span class="subtle-badge">${label}: ${value}</span>`;
+        }).join('')}
       </div>
-    `).join('');
+    `;
   }
 
   function renderNews(news) {
@@ -399,17 +406,16 @@
       return;
     }
 
-    // news가 문자열 배열이라고 가정. URL이 포함되면 링크 처리.
     c.innerHTML = list.slice(0, 30).map(x => {
-      const text = asText(x).trim();
-      const hasUrl = isUrlLike(text);
-      const safe = escapeHtml(text);
+      // news가 문자열 배열이라고 가정 (기존)
+      const text = String(x ?? '').trim();
+      const isUrl = /^https?:\/\/\S+/i.test(text);
 
       return `
-        <div class="news-item">
-          <div class="news-title">${hasUrl ? 'News Link' : 'News'}</div>
-          <div class="news-meta">
-            ${hasUrl ? `<a href="${escapeHtml(text)}" target="_blank">열기 →</a>` : safe}
+        <div class="list-item">
+          <div class="list-title">${isUrl ? 'News Link' : 'News'}</div>
+          <div class="list-meta">
+            ${isUrl ? `<a href="${escapeHtml(text)}" target="_blank">열기 →</a>` : escapeHtml(text)}
           </div>
         </div>
       `;
@@ -425,44 +431,69 @@
       return;
     }
 
-    c.innerHTML = `
-      <div class="grid">
-        ${list.slice(0, 24).map(x => {
-          const title = escapeHtml(x.title ?? x.name ?? 'Whitepaper');
-          const url = asText(x.url ?? x.link ?? '').trim();
-          const meta = url ? 'Source link available' : 'No link provided';
-          return `
-            <div class="item">
-              <div class="item-title">${title}</div>
-              <div class="item-meta">${escapeHtml(meta)}</div>
-              <div class="item-box">
-                ${url ? `<a href="${escapeHtml(url)}" target="_blank">문서 열기 →</a>` : '링크가 없습니다.'}
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
+    c.innerHTML = list.slice(0, 24).map(x => {
+      const title = escapeHtml(x.title ?? x.name ?? 'Whitepaper');
+      const url = String(x.url ?? x.link ?? '').trim();
+
+      return `
+        <div class="list-item">
+          <div class="list-title">${title}</div>
+          <div class="list-meta">
+            ${url ? `<a href="${escapeHtml(url)}" target="_blank">문서 열기 →</a>` : '링크가 없습니다.'}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderOverviewBadges(stats) {
+    const metricRow = document.getElementById('metricRow');
+    const list = asArray(stats);
+
+    if (!list.length) {
+      metricRow.innerHTML = `<span class="metric-badge">Stats: 0</span>`;
+      document.getElementById('metricMeaning').style.display = 'block';
+      return;
+    }
+
+    metricRow.innerHTML = `
+      <span class="metric-badge">Stats: ${list.length}</span>
+      ${list.slice(0, 4).map(x => {
+        const label = escapeHtml(x.label ?? x.name ?? 'Stat');
+        const value = escapeHtml(x.value ?? x.val ?? '-');
+        return `<span class="subtle-badge">${label}: ${value}</span>`;
+      }).join('')}
     `;
+
+    document.getElementById('metricMeaning').style.display = 'block';
   }
 
   async function loadData() {
     try {
       const res = await fetch('/.netlify/functions/interval');
-      const data = await res.json();
+      const d = await res.json();
 
-      const stats = data.stats ?? data.statistics ?? [];
-      const news = data.news ?? data.relatedNews ?? [];
-      const whitepapers = data.whitepapers ?? data.research ?? data.wp ?? [];
+      // 기존 interval 응답 형태 유지
+      const stats = d.stats ?? d.statistics ?? [];
+      const news = d.news ?? d.relatedNews ?? [];
+      const wp = d.whitepapers ?? d.research ?? d.wp ?? [];
 
+      renderOverviewBadges(stats);
+
+      // 수익률(차트) 렌더링
+      const seriesObj = pickReturnSeries(d);
+      renderReturnChart(seriesObj);
+
+      // 나머지 섹션
       renderStats(stats);
-      renderTakeaways(stats);
       renderNews(news);
-      renderWhitepapers(whitepapers);
+      renderWhitepapers(wp);
 
     } catch (err) {
       console.error('Error loading interval data:', err);
       document.getElementById('metricRow').innerHTML = `<span class="metric-badge">Error</span>`;
-      document.getElementById('takeawaysGrid').innerHTML = `<div class="error">데이터를 불러오는 중 오류가 발생했습니다.</div>`;
+      document.getElementById('returnBadges').innerHTML = `<span class="metric-badge">Error</span>`;
+      document.getElementById('statsContainer').innerHTML = `<div class="error">데이터를 불러오는 중 오류가 발생했습니다.</div>`;
       document.getElementById('newsContainer').innerHTML = `<div class="error">데이터를 불러오는 중 오류가 발생했습니다.</div>`;
       document.getElementById('wpContainer').innerHTML = `<div class="error">데이터를 불러오는 중 오류가 발생했습니다.</div>`;
     }
@@ -472,4 +503,3 @@
 </script>
 </body>
 </html>
-```
