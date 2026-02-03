@@ -18,7 +18,7 @@
   let activeKeyword = 'Private Debt';
   let userKwFilter = null;
 
-  // ✅ Private Debt 탭에서 “관련 기사만” 남기기 위한 동의어 세트
+  // ✅ Private Debt 탭에서 관련 기사만 남기기 위한 동의어 세트
   const TAB_SYNONYMS = {
     'Private Debt': [
       'private debt',
@@ -36,6 +36,10 @@
       'private capital',
     ],
   };
+
+  // ===== 안정화용: in-memory cache (같은 탭/키워드라면 2분 캐시) =====
+  const _resultCache = new Map(); // key -> {ts, items}
+  const RESULT_CACHE_MS = 2 * 60 * 1000;
 
   function escapeHTML(s){
     return (s ?? '')
@@ -112,7 +116,7 @@
     });
   }
 
-  // ✅ 테이블명: user_search_keywords (너가 이전에 지정한 이름)
+  // ✅ 테이블명: user_search_keywords
   async function loadMyKeywords(){
     kwStatus.textContent = '';
     kwChips.innerHTML = '<div class="muted" style="margin-top:0;">불러오는 중...</div>';
@@ -245,7 +249,6 @@
   });
 
   function buildQueryKeyword(){
-    // 서버 쿼리는 그대로 보내되, 최종 노출은 클라이언트에서 관련어 필터링
     return userKwFilter ? `${activeKeyword} ${userKwFilter}`.trim() : activeKeyword;
   }
 
@@ -265,7 +268,6 @@
       item?.description
     ].filter(Boolean).join(' '));
 
-    // 탭 관련 동의어 중 하나라도 포함되면 OK
     return syns.some(k => hay.includes(k.toLowerCase()));
   }
 
@@ -323,49 +325,118 @@
     statusEl.textContent = `검색어: ${keyword}` + (meta?.note ? ` · ${meta.note}` : '');
   }
 
+  // ===== 네트워크 안정화: timeout + retry + JSON 검사 =====
+  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+  async function fetchWithTimeout(url, ms, options = {}) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms);
+    try {
+      return await fetch(url, { ...options, signal: ctrl.signal });
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  async function fetchJsonRobust(url, {
+    timeoutMs = 9000,
+    retries = 2,
+    baseDelayMs = 500,
+    maxDelayMs = 2500
+  } = {}) {
+    let lastErr = null;
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        if (attempt > 0) {
+          const jitter = Math.floor(Math.random() * 120);
+          const backoff = Math.min(maxDelayMs, baseDelayMs * Math.pow(2, attempt - 1)) + jitter;
+          await sleep(backoff);
+        }
+
+        const res = await fetchWithTimeout(url, timeoutMs, { cache: 'no-store' });
+
+        const ct = (res.headers.get('content-type') || '').toLowerCase();
+
+        // JSON이 아닌 HTML 에러 페이지가 내려오면 여기서 잡아낸다
+        if (!ct.includes('application/json')) {
+          const txt = await res.text().catch(() => '');
+          throw new Error(`non-json response (${res.status}): ${txt.slice(0, 120)}`);
+        }
+
+        const j = await res.json().catch(() => null);
+        if (!res.ok) {
+          const msg = (j && (j.error || j.message)) ? (j.error || j.message) : `Function error (${res.status})`;
+          throw new Error(msg);
+        }
+
+        return j;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+
+    throw lastErr || new Error('fetch failed');
+  }
+
+  function cacheKeyForResult(activeKeyword, userKwFilter){
+    return `${activeKeyword}::${(userKwFilter || '').toLowerCase()}`;
+  }
+
   async function loadNews(){
     postsEl.innerHTML = '<div class="muted">기사를 불러오는 중...</div>';
     statusEl.textContent = '';
 
     const keyword = buildQueryKeyword();
 
+    // 2분 캐시: 되다말다 완화 + 체감 속도 향상
+    const rKey = cacheKeyForResult(activeKeyword, userKwFilter);
+    const cached = _resultCache.get(rKey);
+    if (cached && (Date.now() - cached.ts) < RESULT_CACHE_MS) {
+      renderPosts(cached.items, keyword, { note: `총 ${cached.items.length}개 (cache)` });
+      return;
+    }
+
     try{
-      // ✅ 기간 파라미터 없음
       const url = `/.netlify/functions/investor-news?keyword=${encodeURIComponent(keyword)}`;
-      const res = await fetch(url, { cache: 'no-store' });
 
-      if (!res.ok){
-        const txt = await res.text().catch(()=> '');
-        throw new Error(`Function error (${res.status}): ${txt.slice(0,200)}`);
-      }
+      // ✅ robust fetch
+      const j = await fetchJsonRobust(url, {
+        timeoutMs: 10000,
+        retries: 2,
+        baseDelayMs: 600,
+        maxDelayMs: 2400
+      });
 
-      const j = await res.json();
       const rawItems = Array.isArray(j?.items) ? j.items : [];
 
-      // ✅ 1차: 탭(Private Debt) 관련성 필터
+      // ✅ 1차: 탭 관련성 필터
       const tabFiltered = rawItems.filter(it => isRelevantForTab(activeKeyword, it));
 
-      // ✅ 2차: 내 키워드(선택된 chip) 본문 포함 필터
+      // ✅ 2차: 내 키워드 본문 포함 필터
       const finalItems = tabFiltered.filter(it => isRelevantForUserKeyword(userKwFilter, it));
 
-      // ✅ 결과가 0이면: 탭 필터만 유지하고, 내 키워드 필터는 힌트로 안내
+      // ✅ 결과 0 처리
       if (finalItems.length === 0 && rawItems.length > 0){
         if (userKwFilter){
-          renderPosts(tabFiltered, keyword, { hint: '내 키워드가 기사 본문/제목에 포함된 결과가 없습니다' });
+          renderPosts(tabFiltered, keyword, { hint: '내 키워드가 기사 본문 또는 제목에 포함된 결과가 없습니다' });
+          _resultCache.set(rKey, { ts: Date.now(), items: tabFiltered });
           return;
         }
       }
 
-      // ✅ 탭 필터 결과도 0이면: 서버가 너무 엉뚱한걸 내려준 것. (그래도 “전부 0”보다 낫게) raw를 그대로 보여주되 경고 배지
       if (tabFiltered.length === 0 && rawItems.length > 0){
         renderPosts(rawItems, keyword, { hint: '서버 결과가 탭과 무관해 보여 전체를 표시합니다' });
+        _resultCache.set(rKey, { ts: Date.now(), items: rawItems });
         return;
       }
 
       renderPosts(finalItems, keyword, { note: `총 ${finalItems.length}개` });
+      _resultCache.set(rKey, { ts: Date.now(), items: finalItems });
+
     }catch(err){
       postsEl.innerHTML = '<div class="muted">기사를 불러오는 중 오류가 발생했습니다.</div>';
-      statusEl.textContent = err.message || String(err);
+      statusEl.textContent = err?.message ? err.message : String(err);
     }
   }
 
