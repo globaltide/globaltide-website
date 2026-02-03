@@ -17,10 +17,6 @@ function ymd(){
   return `${yy}${mm}${dd}`;
 }
 
-/**
- * Exports items to Excel (no snippet as requested).
- * Requires XLSX loaded globally.
- */
 export function exportToXlsx(items, query){
   if (!window.XLSX) throw new Error("XLSX not loaded");
 
@@ -29,6 +25,7 @@ export function exportToXlsx(items, query){
     Source: it.source || "",
     Title: it.title || "",
     URL: it.url || "",
+    // snippet 컬럼은 요청대로 제외
   }));
 
   const ws = window.XLSX.utils.json_to_sheet(rows);
