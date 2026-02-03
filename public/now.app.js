@@ -260,19 +260,31 @@ async function loadHeadlines(){
   if (rssRes?.items?.length && list){
     rssRes.items.slice(0, 30).forEach(it=>{
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;justify-content:space-between;gap:12px;margin-bottom:8px;';
+      row.style.cssText = 'display:flex;justify-content:space-between;gap:12px;margin-bottom:12px;';
 
       const left = document.createElement('div');
       left.style.cssText = 'min-width:0;flex:1;';
+      
       const a = document.createElement('a');
       a.href = it.link;
       a.target = '_blank';
       a.rel = 'noopener noreferrer';
       a.textContent = it.title;
+      a.style.cssText = 'font-size:13px;color:#0066cc;text-decoration:none;';
+      a.onmouseover = function(){ this.style.textDecoration = 'underline'; };
+      a.onmouseout = function(){ this.style.textDecoration = 'none'; };
       left.appendChild(a);
+      
+      if (it.summary && it.summary !== it.title) {
+        const summary = document.createElement('div');
+        summary.textContent = it.summary;
+        summary.style.cssText = 'font-size:14px;color:#333;margin-top:4px;line-height:1.4;';
+        left.appendChild(summary);
+      }
 
       const right = document.createElement('div');
       right.className = 'muted-xs';
+      right.style.cssText = 'white-space:nowrap;font-size:12px;color:#888;';
       right.textContent = it.pubDate ? new Date(it.pubDate).toLocaleDateString() : '';
 
       row.append(left, right);
