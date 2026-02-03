@@ -1,11 +1,5 @@
 // netlify/functions/investor-news.js
-// Google News RSS -> JSON
-// Features:
-// 1) URL canonicalization + exact dedup
-// 2) Similarity clustering (cross-publisher same-story filter)
-// 3) Negative keyword exclusion (optional RFP bypass)
-
-const { XMLParser } = require("fast-xml-parser");
+// Google News RSS -> JSON (no external dependencies)
 
 const CACHE_MS = 3 * 60 * 1000; // 3 minutes
 let cache = { ts: 0, payload: null };
@@ -39,7 +33,7 @@ function canonicalizeUrl(url) {
 function normalizeTitle(title) {
   return (title || "")
     .toLowerCase()
-    .replace(/[“”"']/g, "")
+    .replace(/["""']/g, "")
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -63,7 +57,6 @@ function dedupExact(items) {
     out.push(it);
   }
 
-  // Second pass: same normalized title + day
   const seen2 = new Set();
   const out2 = [];
   for (const it of out) {
@@ -78,8 +71,6 @@ function dedupExact(items) {
   }
   return out2;
 }
-
-/** ---------- Similarity (cross-publisher same-story) ---------- **/
 
 const STOPWORDS_EN = new Set([
   "the","a","an","and","or","to","of","in","on","for","with","by","from","at","as",
@@ -98,9 +89,8 @@ const STOPWORDS_KO = new Set([
 
 function tokenize(text) {
   const s = (text || "").toLowerCase();
-  // keep letters/numbers/spaces (ko/en)
   const clean = s
-    .replace(/[“”"']/g, "")
+    .replace(/["""']/g, "")
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -109,17 +99,11 @@ function tokenize(text) {
 
   const raw = clean.split(" ").filter(Boolean);
 
-  // basic stopword removal + length filter
   const tokens = [];
   for (const w of raw) {
     if (w.length <= 1) continue;
-
-    // english stopwords
     if (/^[a-z]+$/.test(w) && STOPWORDS_EN.has(w)) continue;
-
-    // korean stopwords (exact match)
     if (STOPWORDS_KO.has(w)) continue;
-
     tokens.push(w);
   }
 
@@ -134,18 +118,13 @@ function jaccard(aSet, bSet) {
   return union ? inter / union : 0;
 }
 
-/**
- * Cluster same-day similar stories and keep 1 representative.
- * Why same-day: prevents over-aggregating recurring topics.
- */
 function dedupSimilarSameDay(items, opts = {}) {
   const {
-    threshold = 0.62,       // higher => stricter (fewer merges)
-    minTokens = 6,          // avoid merging too-short titles
+    threshold = 0.62,
+    minTokens = 6,
     keepPerCluster = 1,
   } = opts;
 
-  // group by date (YYYY-MM-DD)
   const byDay = new Map();
   for (const it of items) {
     const d = (it.date || "").slice(0, 10) || "unknown";
@@ -156,16 +135,14 @@ function dedupSimilarSameDay(items, opts = {}) {
   const out = [];
 
   for (const [day, arr] of byDay.entries()) {
-    // sort within day by timestamp desc so best "latest" tends to win
     arr.sort((a, b) => (b._ts || 0) - (a._ts || 0));
 
-    const clusters = []; // { rep, repSet, members[] }
+    const clusters = [];
 
     for (const it of arr) {
       const baseText = `${it.title || ""} ${it.body || ""}`;
       const toks = tokenize(baseText);
 
-      // if too short, don't cluster aggressively
       if (toks.length < minTokens) {
         clusters.push({ rep: it, repSet: new Set(toks), members: [it] });
         continue;
@@ -178,7 +155,6 @@ function dedupSimilarSameDay(items, opts = {}) {
         const score = jaccard(c.repSet, tSet);
         if (score >= threshold) {
           c.members.push(it);
-          // keep the rep as first (already sorted newest), but expand token set for robustness
           for (const t of tSet) c.repSet.add(t);
           placed = true;
           break;
@@ -190,10 +166,8 @@ function dedupSimilarSameDay(items, opts = {}) {
       }
     }
 
-    // pick representative(s) per cluster (default 1)
     for (const c of clusters) {
       const members = c.members;
-      // already newest-first
       out.push(...members.slice(0, keepPerCluster));
     }
   }
@@ -201,25 +175,17 @@ function dedupSimilarSameDay(items, opts = {}) {
   return out;
 }
 
-/** ---------- Negative keyword filter ---------- **/
-
-// Tune freely. Keep it conservative to avoid deleting too much.
 const NEGATIVE_PATTERNS = [
-  // KR
   "부도","파산","디폴트","연체","위기","충격","급락","폭락","붕괴","손실","적자","사기","횡령","배임",
   "구속","기소","수사","압수수색","징역","벌금","제재","징계","취소","중단","철회",
   "불법","논란","리콜","사망","사고","참사","감원","구조조정","파업","해고",
   "피해자","뒷전","워싱","민주당","국민의힘","국회","우려","불과","무색","죄송","질타","부실선정",
-  // EN 는 금지어 없음
-
 ];
 
 function hasNegative(text) {
   const t = (text || "").toLowerCase();
   return NEGATIVE_PATTERNS.some(k => t.includes(k.toLowerCase()));
 }
-
-/** ---------- Classification ---------- **/
 
 function labels() {
   return {
@@ -246,16 +212,11 @@ function googleNewsRssUrl({ q, hl, gl, ceid }) {
 }
 
 const FEEDS = [
-  // Korea investor actions/news
   { id: "kr_investor_actions", region: "korea",  q: "국민연금 투자 집행 OR 공제회 투자 OR 보험사 대체투자 OR 출자사업", hl:"ko", gl:"KR", ceid:"KR:ko" },
   { id: "kr_investor_news",    region: "korea",  q: "국민연금 OR KIC OR 공제회 OR 보험사 운용사 선정 OR 위탁운용사", hl:"ko", gl:"KR", ceid:"KR:ko" },
-
-  // Global investor actions/news/performance
   { id: "gl_investor_actions", region: "global", q: "pension fund commits OR allocates OR invests in private credit OR direct lending", hl:"en", gl:"US", ceid:"US:en" },
   { id: "gl_investor_news",    region: "global", q: "pension fund OR insurance company manager search OR investor intentions", hl:"en", gl:"US", ceid:"US:en" },
   { id: "gl_performance",      region: "global", q: "pension fund returns fiscal year OR annual report returns", hl:"en", gl:"US", ceid:"US:en" },
-
-  // RFP
   { id: "rfp_kr",              region: "korea",  q: "위탁운용사 모집 공고 OR 출자사업 공고 OR 제안서 RFP", hl:"ko", gl:"KR", ceid:"KR:ko" },
   { id: "rfp_gl",              region: "global", q: "RFP manager search mandate pension fund private debt", hl:"en", gl:"US", ceid:"US:en" },
 ];
@@ -266,17 +227,29 @@ async function fetchRss(url) {
   return await res.text();
 }
 
-function parseRss(xml) {
-  const parser = new XMLParser({
-    ignoreAttributes: false,
-    attributeNamePrefix: "@_",
-    allowBooleanAttributes: true
-  });
-  const obj = parser.parse(xml);
-  const channel = obj?.rss?.channel;
-  const items = channel?.item ? (Array.isArray(channel.item) ? channel.item : [channel.item]) : [];
-  const sourceTitle = channel?.title || "Google News";
-  return { sourceTitle, items };
+// Simple regex-based RSS parser (no dependencies)
+function parseRssSimple(xml) {
+  const items = [];
+  const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+  
+  let match;
+  while ((match = itemRegex.exec(xml)) !== null) {
+    const block = match[1];
+    
+    const titleMatch = block.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/) || block.match(/<title>([\s\S]*?)<\/title>/);
+    const linkMatch = block.match(/<link>([\s\S]*?)<\/link>/);
+    const pubDateMatch = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
+    const descMatch = block.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/) || block.match(/<description>([\s\S]*?)<\/description>/);
+    
+    const title = titleMatch ? titleMatch[1] || titleMatch[2] : "";
+    const link = linkMatch ? linkMatch[1] : "";
+    const pubDate = pubDateMatch ? pubDateMatch[1] : "";
+    const description = descMatch ? descMatch[1] || descMatch[2] : "";
+    
+    items.push({ title, link, pubDate, description });
+  }
+  
+  return { sourceTitle: "Google News", items };
 }
 
 function isRfpText(title, desc) {
@@ -320,7 +293,6 @@ function guessAsset(title, desc) {
 }
 
 exports.handler = async function handler() {
-  // cache hit
   if (cache.payload && Date.now() - cache.ts < CACHE_MS) {
     return {
       statusCode: 200,
@@ -339,7 +311,7 @@ exports.handler = async function handler() {
     for (const f of FEEDS) {
       const url = googleNewsRssUrl({ q: f.q, hl: f.hl, gl: f.gl, ceid: f.ceid });
       const xml = await fetchRss(url);
-      const parsed = parseRss(xml);
+      const parsed = parseRssSimple(xml);
 
       for (const it of parsed.items) {
         const title = stripHtml(it.title || "");
@@ -379,8 +351,6 @@ exports.handler = async function handler() {
           _ts: Number.isFinite(ts) ? ts : 0
         };
 
-        // Negative filter (default: exclude if negative AND not RFP)
-        // If you want to exclude even RFP, remove `&& !item.rfp`.
         const negText = `${item.title} ${item.body}`;
         if (hasNegative(negText) && !item.rfp) continue;
 
@@ -388,20 +358,16 @@ exports.handler = async function handler() {
       }
     }
 
-    // 1) exact-ish dedup
     let items = dedupExact(all);
 
-    // 2) cross-publisher same-story dedup (same-day clustering)
     items = dedupSimilarSameDay(items, {
-      threshold: 0.55, // tune: 0.55 (more aggressive) ~ 0.70 (more strict)
+      threshold: 0.55,
       minTokens: 6,
       keepPerCluster: 1
     });
 
-    // sort newest first
     items.sort((a, b) => (b._ts || 0) - (a._ts || 0));
 
-    // trim
     const out = items.slice(0, 220).map(({ _ts, ...rest }) => rest);
 
     const payload = { updatedAt: nowISO(), items: out };
