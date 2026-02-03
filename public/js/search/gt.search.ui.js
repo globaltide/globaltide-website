@@ -54,4 +54,34 @@ export function renderItems(items, metaText){
   if (!postsEl) return;
 
   if (!items || items.length === 0){
-    postsE
+    postsEl.innerHTML = `<div class="muted">표시할 기사가 없습니다.</div>`;
+    setStatus(metaText || "");
+    return;
+  }
+
+  postsEl.innerHTML = items.map(it => {
+    const title = it.title || "";
+    const link = it.url || "#";
+    const source = it.source || "";
+    const date = it.date || "";
+    // ✅ 한글 요약이 있으면 그걸 우선 사용
+    const snip = (it.snippetKo || it.snippet || "").toString().trim();
+
+    return `
+      <div class="post">
+        <div class="h">
+          <h3 class="t">
+            <a href="${escapeHTML(link)}" target="_blank" rel="noopener">${escapeHTML(title)}</a>
+          </h3>
+          <div class="d">${escapeHTML(formatDateKo(date) || date)}</div>
+        </div>
+        ${snip ? `<div class="s">${escapeHTML(snip)}</div>` : ``}
+        <div class="muted" style="margin-top:8px;">
+          ${source ? `<span class="pill">${escapeHTML(source)}</span>` : ``}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  setStatus(metaText || "");
+}
