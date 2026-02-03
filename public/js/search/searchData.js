@@ -1,170 +1,140 @@
-function stripHtml(s) {
-  return (s || "")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function isKorean(text) {
-  return /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(text);
+  return /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(text || "");
 }
 
 // ====== in-memory cache (same session) ======
 const _cache = new Map(); // key -> { ts, items }
 const CACHE_MS = 10 * 60 * 1000; // 10 min
 
-// ====== translation cache ======
-const _translationCache = new Map();
-
 function cacheKey(q, params) {
+  // q + locale params
   return `${params.ceid}::${q.toLowerCase()}`;
 }
 
-async function fetchWithTimeout(url, ms) {
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function fetchJsonWithTimeout(url, ms, fetchOptions = {}) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
   try {
-    return await fetch(url, { signal: ctrl.signal });
+    const res = await fetch(url, {
+      ...fetchOptions,
+      signal: ctrl.signal,
+      // 캐시/프록시 이슈 완화
+      cache: "no-store",
+    });
+
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+
+    // JSON이 아닌 응답(HTML 에러 페이지 등)은 즉시 실패 처리
+    if (!ct.includes("application/json")) {
+      const text = await res.text().catch(() => "");
+      const preview = (text || "").slice(0, 120);
+      throw new Error(`non-json response: ${res.status} ${preview}`);
+    }
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson?.error || `http ${res.status}`);
+    }
+
+    return await res.json();
   } finally {
     clearTimeout(t);
   }
 }
 
-async function tryProxy(name, url, timeoutMs) {
-  const r = await fetchWithTimeout(url, timeoutMs);
-  if (!r.ok) throw new Error(`${name} not ok: ${r.status}`);
-  const text = await r.text();
-  if (!text || text.length < 80 || /<html/i.test(text)) {
-    throw new Error(`${name} returned html/too-short`);
-  }
-  return text;
-}
-
-async function fetchRssViaFreeProxy(rssUrl) {
-  const fast = [
-    { name: "allorigins", url: `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`, t: 3500 },
-    { name: "corsproxy.io", url: `https://corsproxy.io/?${encodeURIComponent(rssUrl)}`, t: 3500 },
-  ];
-  const slow = [
-    { name: "codetabs", url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(rssUrl)}`, t: 9000 },
-  ];
-  
+async function fetchJsonWithRetry(url, {
+  timeoutMs = 8000,
+  retries = 2,
+  baseDelayMs = 500,
+  maxDelayMs = 2500,
+} = {}) {
   let lastErr = null;
-  for (const p of fast) {
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      return await tryProxy(p.name, p.url, p.t);
+      // 지터로 동시 실패(스파이크) 완화
+      const jitter = Math.floor(Math.random() * 120);
+      if (attempt > 0) {
+        const backoff = Math.min(maxDelayMs, baseDelayMs * Math.pow(2, attempt - 1)) + jitter;
+        await sleep(backoff);
+      }
+      return await fetchJsonWithTimeout(url, timeoutMs);
     } catch (e) {
       lastErr = e;
     }
   }
-  for (const p of slow) {
-    try {
-      return await tryProxy(p.name, p.url, p.t);
-    } catch (e) {
-      lastErr = e;
-    }
-  }
-  throw new Error(`Failed to fetch. ${lastErr?.message || ""}`.trim());
+
+  throw new Error(lastErr?.message || "failed to fetch json");
 }
 
-// ====== Translation functions ======
-async function translateText(text) {
-  if (!text) return text;
-  
-  // 한글이면 번역 안함
-  if (isKorean(text)) return text;
-  
-  // 캐시 확인
-  if (_translationCache.has(text)) {
-    return _translationCache.get(text);
-  }
+function normalizeItems(payload) {
+  // payload가 배열이거나 {items:[...]} 형태 모두 지원
+  const arr = Array.isArray(payload) ? payload : (payload?.items || []);
+  if (!Array.isArray(arr)) return [];
 
-  try {
-    const encodedText = encodeURIComponent(text);
-    const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ko&dt=t&q=' + encodedText;
-    
-    const response = await fetch(url);
-    const data = await response.json();
-    
-    if (data && data[0] && data[0][0] && data[0][0][0]) {
-      const translated = data[0][0][0];
-      _translationCache.set(text, translated);
-      return translated;
-    }
-  } catch (error) {
-    console.error('Translation error:', error);
-  }
-  
-  return text;
+  return arr.map((x) => ({
+    title: x.title || "",
+    url: x.url || x.link || "",
+    source: x.source || "",
+    date: x.date || x.pubDate || "",
+    snippet: x.snippet || x.description || "",
+    // 서버가 번역해서 내려주면 그대로 사용
+    titleKo: x.titleKo,
+    snippetKo: x.snippetKo,
+  }));
 }
 
-async function translateItems(items) {
-  const promises = items.map(async (item, idx) => {
-    // API 레이트 리밋 방지 (100ms 간격)
-    await new Promise(resolve => setTimeout(resolve, idx * 100));
-    
-    const titleKo = await translateText(item.title);
-    const snippetKo = item.snippet ? await translateText(item.snippet.substring(0, 200)) : '';
-    
-    return {
-      ...item,
-      titleKo,
-      snippetKo
-    };
-  });
-
-  return await Promise.all(promises);
-}
-
+/**
+ * searchNews(query)
+ * - 외부(구글뉴스/프록시/번역) 직접 호출 금지
+ * - Netlify function: /.netlify/functions/search 로만 호출
+ */
 export async function searchNews(query) {
   const q = (query || "").trim();
   if (!q) return [];
-  
+
   const korean = isKorean(q);
   const params = korean
     ? { hl: "ko", gl: "KR", ceid: "KR:ko" }
     : { hl: "en", gl: "US", ceid: "US:en" };
-  
+
   // 캐시 hit면 즉시 반환
   const key = cacheKey(q, params);
   const cached = _cache.get(key);
   if (cached && (Date.now() - cached.ts) < CACHE_MS) {
     return cached.items;
   }
-  
-  const rssUrl =
-    `https://news.google.com/rss/search?q=${encodeURIComponent(q)}` +
-    `&hl=${params.hl}&gl=${params.gl}&ceid=${params.ceid}`;
-  
-  const xmlText = await fetchRssViaFreeProxy(rssUrl);
-  
-  const doc = new DOMParser().parseFromString(xmlText, "text/xml");
-  const parserError = doc.querySelector("parsererror");
-  if (parserError) {
-    throw new Error(`XML parse error: ${parserError.textContent.slice(0, 200)}`);
-  }
-  
-  const nodes = Array.from(doc.querySelectorAll("item"));
-  const items = nodes.map((it) => {
-    const title = it.querySelector("title")?.textContent?.trim() || "";
-    const link = it.querySelector("link")?.textContent?.trim() || "";
-    const pubDate = it.querySelector("pubDate")?.textContent?.trim() || "";
-    const source = it.querySelector("source")?.textContent?.trim() || "";
-    const desc = stripHtml(it.querySelector("description")?.textContent || "");
-    return { title, url: link, source, date: pubDate, snippet: desc };
+
+  // ✅ 프론트는 Netlify function만 호출
+  // function이 내부에서 RSS/본문/번역 등을 처리해야 함
+  const url =
+    "/.netlify/functions/search?" +
+    new URLSearchParams({
+      q,
+      hl: params.hl,
+      gl: params.gl,
+      ceid: params.ceid,
+      // 서버에서 번역 처리 권장 (영문 검색이면 ko 번역 내려주기)
+      translate: korean ? "0" : "1",
+      // 필요하면 서버에서 max 제한
+      limit: "30",
+    }).toString();
+
+  const payload = await fetchJsonWithRetry(url, {
+    timeoutMs: 9000,
+    retries: 2,
+    baseDelayMs: 500,
+    maxDelayMs: 2500,
   });
-  
-  // 번역 (영어 검색일 때만, 최대 15개)
-  let finalItems = items;
-  if (!korean && items.length > 0) {
-    const itemsToTranslate = items.slice(0, 15);
-    const translatedItems = await translateItems(itemsToTranslate);
-    const remainingItems = items.slice(15);
-    finalItems = [...translatedItems, ...remainingItems];
-  }
-  
+
+  const items = normalizeItems(payload);
+
   // 캐시 저장
-  _cache.set(key, { ts: Date.now(), items: finalItems });
-  
-  return finalItems;
+  _cache.set(key, { ts: Date.now(), items });
+
+  return items;
 }
