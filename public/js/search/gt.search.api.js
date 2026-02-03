@@ -6,6 +6,68 @@ function isKorean(text){
   return /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(text || "");
 }
 
+function decodeHtmlEntities(s){
+  if (!s) return "";
+  return s
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ");
+}
+
+function stripHtml(s){
+  return (s || "").replace(/<[^>]*>/g, " ");
+}
+
+function cleanText(s){
+  return (s || "").replace(/\s+/g, " ").trim();
+}
+
+function summarizeTo100(text){
+  const t = cleanText(text);
+  if (!t) return "";
+  if (t.length <= 100) return t;
+
+  const cut = t.slice(0, 160);
+  const idx = Math.max(
+    cut.lastIndexOf(". "),
+    cut.lastIndexOf("? "),
+    cut.lastIndexOf("! "),
+    cut.lastIndexOf("· "),
+    cut.lastIndexOf(" - "),
+    cut.lastIndexOf(" — ")
+  );
+  const base = (idx > 40) ? cut.slice(0, idx + 1) : cut;
+  return base.slice(0, 100).trim();
+}
+
+const _translationCache = new Map();
+async function translateToKo(text){
+  const t = (text || "").trim();
+  if (!t) return "";
+  if (t.length < 3) return t;
+
+  if (_translationCache.has(t)) return _translationCache.get(t);
+
+  try{
+    const url =
+      "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ko&dt=t&q=" +
+      encodeURIComponent(t);
+
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return "";
+    const data = await res.json().catch(() => null);
+    const out = data?.[0]?.[0]?.[0];
+    const ko = (typeof out === "string") ? out : "";
+    if (ko) _translationCache.set(t, ko);
+    return ko;
+  }catch(_){
+    return "";
+  }
+}
+
 async function fetchWithTimeout(url, ms){
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
@@ -16,16 +78,39 @@ async function fetchWithTimeout(url, ms){
   }
 }
 
+async function safeJson(res){
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+  if (!ct.includes("application/json")){
+    const txt = await res.text().catch(() => "");
+    throw new Error(`non-json (${res.status}): ${txt.slice(0, 160)}`);
+  }
+  return await res.json();
+}
+
+async function mapWithConcurrency(arr, n, fn){
+  const out = new Array(arr.length);
+  let i = 0;
+  const workers = new Array(Math.min(n, arr.length)).fill(0).map(async () => {
+    while (i < arr.length){
+      const idx = i++;
+      out[idx] = await fn(arr[idx], idx);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}
+
 /**
  * Calls Netlify Function: /.netlify/functions/gt_search
- * Returns: array of { title, url, date, source, snippet }
+ * Returns items with snippet + snippetKo (for english query)
  */
 export async function gtSearchNews(query, { limit = 30 } = {}){
   const q = (query || "").trim();
   if (!q) return [];
 
-  const korean = isKorean(q);
-  const params = korean
+  const koreanQuery = isKorean(q);
+
+  const params = koreanQuery
     ? { hl: "ko", gl: "KR", ceid: "KR:ko" }
     : { hl: "en", gl: "US", ceid: "US:en" };
 
@@ -41,7 +126,7 @@ export async function gtSearchNews(query, { limit = 30 } = {}){
 
   let lastErr = null;
 
-  // ✅ intermittent 방어: 3회 재시도 + 지수 backoff
+  // ✅ intermittent 방어: 3회 재시도
   for (let attempt = 0; attempt < 3; attempt++){
     try{
       if (attempt > 0){
@@ -52,19 +137,36 @@ export async function gtSearchNews(query, { limit = 30 } = {}){
       }
 
       const res = await fetchWithTimeout(url, 12000);
-
-      const ct = (res.headers.get("content-type") || "").toLowerCase();
-      if (!ct.includes("application/json")){
-        const txt = await res.text().catch(() => "");
-        throw new Error(`non-json (${res.status}): ${txt.slice(0, 160)}`);
-      }
-
-      const j = await res.json();
+      const j = await safeJson(res);
       if (!res.ok) throw new Error(j?.error || `http ${res.status}`);
 
-      const items = Array.isArray(j.items) ? j.items : [];
+      let items = Array.isArray(j.items) ? j.items : [];
+
+      // ✅ 1) &lt;a href... 제거: entity decode -> stripHtml -> clean
+      items = items.map(it => {
+        const raw = it?.snippet || "";
+        const decoded = decodeHtmlEntities(raw);
+        const stripped = stripHtml(decoded);
+        const snippet = cleanText(stripped);
+        return { ...it, snippet };
+      });
+
+      // ✅ 2) 영어 검색이면: snippet을 100자 내 요약 -> 번역해서 snippetKo 생성 (최대 15개)
+      if (!koreanQuery && items.length){
+        const head = items.slice(0, Math.min(15, items.length));
+        const tail = items.slice(head.length);
+
+        const enriched = await mapWithConcurrency(head, 4, async (it) => {
+          const base = summarizeTo100(it.snippet || it.title || "");
+          const ko = await translateToKo(base);
+          return { ...it, snippetKo: ko || "" };
+        });
+
+        items = [...enriched, ...tail];
+      }
+
       return items;
-    } catch(e){
+    }catch(e){
       lastErr = e;
     }
   }
