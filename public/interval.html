@@ -1,216 +1,505 @@
-// public/js/search/main.js
-import { gtSearchNews } from "./gt.search.api.js";
-import { setLoading, renderItems, setStatus, showError } from "./gt.search.ui.js";
-import { exportToXlsx } from "./gt.search.export.js";
-import { createSupabaseClient, getSessionUser, signInGoogle, signOut } from "./gt.search.auth.js";
-import { showKwPanel, loadMyKeywords, addKeyword, bindKeywordUIHandlers } from "./gt.search.keywords.js";
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>Interval Funds | GlobalTide</title>
 
-function $(id){
-  return document.getElementById(id);
-}
+  <script defer src="/nav-top.js"></script>
+  <script defer src="/nav-bottom.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-function setAuthButtons(user){
-  const btnLogin = $("btnLogin");
-  const btnLogout = $("btnLogout");
-  if (!btnLogin || !btnLogout) return;
-  btnLogin.style.display = user ? "none" : "inline-block";
-  btnLogout.style.display = user ? "inline-block" : "none";
-}
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #0b1020;
+      color: #e5e7eb;
+    }
 
-function findDateButtonsContainer(){
-  const section = document.querySelector(".date-filter-section");
-  return section ? section.querySelector(".date-filter-buttons") : null;
-}
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 14px;
+      padding-top: calc(var(--gt-topnav-h, 56px) + 20px);
+      padding-bottom: calc(var(--gt-bottomnav-h, 64px) + 20px);
+    }
 
-function getActivePeriod(){
-  const wrap = findDateButtonsContainer();
-  const active = wrap?.querySelector(".date-btn.active");
-  return active?.getAttribute("data-period") || "all";
-}
+    h1 {
+      color: #fff;
+      font-size: 2rem;
+      margin-bottom: 30px;
+      text-align: center;
+    }
 
-function applyPeriodToDates(period){
-  const startEl = $("startDate");
-  const endEl = $("endDate");
-  if (!startEl || !endEl) return;
+    .card {
+      background: rgba(255, 255, 255, .05);
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 14px;
+      padding: 20px;
+      margin-top: 20px;
+    }
 
-  const now = new Date();
-  const end = new Date(now);
-  const start = new Date(now);
+    .section-title {
+      color: #fff;
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+    }
 
-  if (period === "all"){
-    startEl.value = "";
-    endEl.value = end.toISOString().slice(0,10);
-    return;
+    .chart-description {
+      color: #9ca3af;
+      line-height: 1.6;
+      margin-bottom: 15px;
+      padding: 12px;
+      background: rgba(255, 255, 255, .03);
+      border-radius: 8px;
+      border-left: 3px solid #6366f1;
+      font-size: 0.95rem;
+    }
+
+    .metric-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 10px 0 15px 0;
+    }
+
+    .metric-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    .subtle-badge {
+      display: inline-block;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      color: #e5e7eb;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-weight: 650;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      height: 280px;
+      margin-top: 12px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 30px;
+      color: #9ca3af;
+      font-size: 1rem;
+    }
+
+    .error {
+      color: #ef4444;
+      padding: 15px;
+      background: rgba(239, 68, 68, 0.1);
+      border-radius: 8px;
+    }
+
+    a {
+      color: #93c5fd;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    a:hover {
+      text-decoration: underline;
+      color: #bfdbfe;
+    }
+
+    .list-item {
+      padding: 12px;
+      margin-bottom: 8px;
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      background: rgba(255, 255, 255, .02);
+    }
+
+    .list-item:hover {
+      background: rgba(255, 255, 255, .05);
+      border-color: #6366f1;
+      transform: translateX(3px);
+    }
+
+    .list-title {
+      font-weight: 800;
+      color: #fff;
+      font-size: 1rem;
+      margin-bottom: 5px;
+      line-height: 1.35;
+    }
+
+    .list-meta {
+      color: #9ca3af;
+      font-size: 0.88rem;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 1.6rem; }
+      .chart-wrapper { height: 240px; }
+      .card { padding: 15px; }
+    }
+  </style>
+</head>
+
+<body>
+<main>
+  <h1>Interval Funds & Open-End Alternatives</h1>
+
+  <!-- Market Overview -->
+  <div class="card">
+    <h2 class="section-title">Market Overview</h2>
+
+    <div class="chart-description">
+      <strong>이 페이지의 의미:</strong>
+      Interval Fund는 open-end 구조를 유지하면서도, 환매를 “매일”이 아니라 “정해진 주기와 한도”로 제공하는 상품입니다.
+      비유동 자산(Private Credit/Real Estate 등)을 담되, 판매채널(리테일/RIA)에서 운용 가능한 형태로 설계되는 경우가 많습니다.
+      아래는 수익률(또는 Return) 흐름과 핵심 통계, 관련 뉴스, 리서치 자료를 한 화면에서 볼 수 있게 구성했습니다.
+    </div>
+
+    <div class="metric-row" id="metricRow">
+      <span class="metric-badge">Loading...</span>
+    </div>
+
+    <div class="chart-description" id="metricMeaning" style="display:none;">
+      <strong>지표 해석:</strong>
+      Statistics는 API 정의에 따라 AUM, 펀드 수, 환매조건, 채널 등 다양한 의미를 가질 수 있습니다.
+      이 페이지는 “있는 데이터를 최대한 보기 좋게” 요약 표시합니다.
+    </div>
+  </div>
+
+  <!-- Return Chart -->
+  <div class="card">
+    <h2 class="section-title">Return Overview</h2>
+
+    <div class="chart-description" id="returnMeaning">
+      <strong>이 차트의 의미:</strong>
+      Interval Fund / Open-end 대체상품의 수익률(또는 Yield/Performance) 히스토리를 표시합니다.
+      API 응답에 returnHistory / yieldHistory / performanceHistory / navHistory 중 하나가 존재하면 자동으로 차트를 구성합니다.
+    </div>
+
+    <div class="metric-row" id="returnBadges">
+      <span class="subtle-badge">Loading...</span>
+    </div>
+
+    <div class="chart-wrapper">
+      <canvas id="returnChart"></canvas>
+    </div>
+
+    <div id="returnFallback" class="chart-description" style="display:none;">
+      현재 interval API 응답에 수익률 히스토리 데이터가 없습니다.
+      (interval 함수에서 returnHistory 같은 배열을 내려주면 자동으로 차트가 표시됩니다.)
+    </div>
+  </div>
+
+  <!-- Statistics -->
+  <div class="card">
+    <h2 class="section-title">Statistics</h2>
+    <div id="statsContainer">
+      <div class="loading">통계를 불러오는 중...</div>
+    </div>
+  </div>
+
+  <!-- Related News -->
+  <div class="card">
+    <h2 class="section-title">Related News</h2>
+    <div id="newsContainer">
+      <div class="loading">관련 뉴스를 불러오는 중...</div>
+    </div>
+  </div>
+
+  <!-- Whitepapers -->
+  <div class="card">
+    <h2 class="section-title">Whitepapers & Research</h2>
+    <div id="wpContainer">
+      <div class="loading">화이트페이퍼를 불러오는 중...</div>
+    </div>
+  </div>
+</main>
+
+<script>
+  let returnChart = null;
+
+  function asArray(x) { return Array.isArray(x) ? x : []; }
+  function safeNumber(n) {
+    const x = Number(n);
+    return Number.isFinite(x) ? x : null;
+  }
+  function fmtPct(n, digits=2) {
+    const x = safeNumber(n);
+    if (x === null) return '-';
+    return `${x.toFixed(digits)}%`;
+  }
+  function escapeHtml(str) {
+    const s = String(str ?? '');
+    return s
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
   }
 
-  if (period === "1m") start.setMonth(start.getMonth() - 1);
-  if (period === "3m") start.setMonth(start.getMonth() - 3);
-  if (period === "6m") start.setMonth(start.getMonth() - 6);
-  if (period === "1y") start.setFullYear(start.getFullYear() - 1);
+  function pickReturnSeries(d) {
+    // 가능한 필드명들을 최대한 흡수
+    // 기대 형태: [{date:"2025-01", value: 8.3}, ...]
+    const candidates = [
+      d.returnHistory,
+      d.yieldHistory,
+      d.performanceHistory,
+      d.navHistory,
+      d.totalReturnHistory,
+      d.series
+    ].filter(Boolean);
 
-  startEl.value = start.toISOString().slice(0,10);
-  endEl.value = end.toISOString().slice(0,10);
-}
+    for (const c of candidates) {
+      if (Array.isArray(c) && c.length) return { series: c, label: 'Return %' };
+    }
 
-async function main(){
-  const qInput = $("qInput");
-  const btnSearch = $("btnSearch");
-  const btnExportXlsx = $("btnExportXlsx");
-  const btnKeywordManage = $("btnKeywordManage");
-  const kwInput = $("kwInput");
-  const kwAddBtn = $("kwAddBtn");
+    // stats 안에 history가 들어있는 경우도 방어
+    if (d.stats && typeof d.stats === 'object') {
+      const s = d.stats;
+      const nested = s.returnHistory || s.yieldHistory || s.performanceHistory || s.navHistory;
+      if (Array.isArray(nested) && nested.length) return { series: nested, label: 'Return %' };
+    }
 
-  if (!qInput || !btnSearch){
-    console.error("Search DOM missing");
-    return;
+    // strategies 형태 (다른 페이지처럼)일 수도 있어서 방어
+    if (Array.isArray(d.strategies) && d.strategies.length) {
+      const s0 = d.strategies[0];
+      const h = s0.returnHistory || s0.yieldHistory || s0.performanceHistory || s0.navHistory;
+      if (Array.isArray(h) && h.length) return { series: h, label: 'Return %' };
+    }
+
+    return null;
   }
 
-  const client = createSupabaseClient();
-  let currentUser = await getSessionUser(client);
-  setAuthButtons(currentUser);
+  function normalizeSeries(series) {
+    const cleaned = asArray(series)
+      .filter(x => x && x.date != null && x.value != null)
+      .map(x => ({ date: String(x.date), value: safeNumber(x.value) }))
+      .filter(x => x.value !== null)
+      .sort((a,b) => a.date.localeCompare(b.date));
+    return cleaned;
+  }
 
-  // default dates
-  applyPeriodToDates(getActivePeriod());
+  function renderReturnChart(seriesObj) {
+    const badges = document.getElementById('returnBadges');
 
-  showKwPanel(false);
-
-  bindKeywordUIHandlers({
-    client,
-    getUser: () => currentUser,
-    onKeywordClicked: (kw) => {
-      qInput.value = kw;
-      btnSearch.click();
-    },
-    onDeleted: async () => {
-      await loadMyKeywords(client, currentUser);
-    }
-  });
-
-  $("btnLogin")?.addEventListener("click", async () => {
-    try{
-      await signInGoogle(client);
-    } catch(e){
-      showError("로그인에 실패했습니다.", e?.message || String(e));
-    }
-  });
-
-  $("btnLogout")?.addEventListener("click", async () => {
-    try{
-      await signOut(client);
-      currentUser = await getSessionUser(client);
-      setAuthButtons(currentUser);
-      showKwPanel(false);
-      setStatus("로그아웃되었습니다.");
-    }catch(e){
-      showError("로그아웃에 실패했습니다.", e?.message || String(e));
-    }
-  });
-
-  client.auth.onAuthStateChange(async () => {
-    currentUser = await getSessionUser(client);
-    setAuthButtons(currentUser);
-    const kwPanel = $("kwPanel");
-    if (kwPanel && kwPanel.style.display === "block" && currentUser){
-      $("kwUserLine").innerHTML = `현재 로그인: <b>${currentUser.email || ""}</b>`;
-      await loadMyKeywords(client, currentUser);
-      if (btnExportXlsx) btnExportXlsx.style.display = "inline-block";
-    }
-    if (!currentUser) showKwPanel(false);
-  });
-
-  btnKeywordManage?.addEventListener("click", async () => {
-    currentUser = await getSessionUser(client);
-    if (!currentUser){
-      try{
-        await signInGoogle(client);
-      } catch(e){
-        showError("로그인이 필요합니다.", e?.message || String(e));
-      }
+    if (!seriesObj) {
+      badges.innerHTML = `<span class="subtle-badge">No return history</span>`;
+      document.getElementById('returnFallback').style.display = 'block';
+      if (returnChart) { returnChart.destroy(); returnChart = null; }
       return;
     }
-    const kwPanel = $("kwPanel");
-    const open = kwPanel && kwPanel.style.display === "block";
-    showKwPanel(!open);
-    if (!open){
-      $("kwUserLine").innerHTML = `현재 로그인: <b>${currentUser.email || ""}</b>`;
-      await loadMyKeywords(client, currentUser);
-      if (btnExportXlsx) btnExportXlsx.style.display = "inline-block";
-    }
-  });
 
-  kwAddBtn?.addEventListener("click", async () => {
-    currentUser = await getSessionUser(client);
-    const ok = await addKeyword(client, currentUser, kwInput?.value || "");
-    if (ok){
-      if (kwInput) kwInput.value = "";
-      await loadMyKeywords(client, currentUser);
-      setStatus("키워드가 추가되었습니다.");
-    }
-  });
-
-  kwInput?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") kwAddBtn?.click();
-  });
-
-  // date buttons click
-  const dateButtons = findDateButtonsContainer();
-  dateButtons?.addEventListener("click", (e) => {
-    const btn = e.target.closest(".date-btn");
-    if (!btn) return;
-    dateButtons.querySelectorAll(".date-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    const period = btn.getAttribute("data-period") || "all";
-    applyPeriodToDates(period);
-  });
-
-  let lastItems = [];
-  let lastQuery = "";
-
-  async function runSearch(){
-    const q = (qInput.value || "").trim();
-    if (!q){
-      setStatus("검색어를 입력하세요.");
+    const hist = normalizeSeries(seriesObj.series);
+    if (!hist.length) {
+      badges.innerHTML = `<span class="subtle-badge">No usable return history</span>`;
+      document.getElementById('returnFallback').style.display = 'block';
+      if (returnChart) { returnChart.destroy(); returnChart = null; }
       return;
     }
-    setLoading();
-    lastQuery = q;
 
-    const s = $("startDate")?.value || "";
-    const e = $("endDate")?.value || "";
-    const metaDate = (s || e) ? ` · 기간: ${s || "전체"} ~ ${e || "오늘"}` : "";
+    document.getElementById('returnFallback').style.display = 'none';
 
-    try{
-      const items = await gtSearchNews(q, { limit: 30 });
-      lastItems = items;
-      renderItems(items, `검색어: ${q} · 총 ${items.length}개${metaDate}`);
-      if (btnExportXlsx){
-        btnExportXlsx.style.display = items.length ? "inline-block" : "none";
+    const first = hist[0].value;
+    const last = hist[hist.length - 1].value;
+    const dir = last > first ? '↑' : last < first ? '↓' : '→';
+
+    const best = Math.max(...hist.map(x => x.value));
+    const worst = Math.min(...hist.map(x => x.value));
+
+    badges.innerHTML = `
+      <span class="metric-badge">Latest: ${fmtPct(last)} ${dir}</span>
+      <span class="subtle-badge">Best: ${fmtPct(best)}</span>
+      <span class="subtle-badge">Worst: ${fmtPct(worst)}</span>
+      <span class="subtle-badge">Points: ${hist.length}</span>
+    `;
+
+    const ctx = document.getElementById('returnChart').getContext('2d');
+
+    if (returnChart) returnChart.destroy();
+
+    returnChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: hist.map(x => x.date),
+        datasets: [{
+          label: seriesObj.label || 'Return %',
+          data: hist.map(x => x.value),
+          borderColor: 'rgba(99, 102, 241, 1)',
+          backgroundColor: 'rgba(99, 102, 241, 0.15)',
+          borderWidth: 2,
+          tension: 0.25,
+          pointRadius: 2,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: { color: '#e5e7eb' }
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: ${fmtPct(ctx.raw, 2)}`
+            }
+          }
+        },
+        scales: {
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+            ticks: { color: '#9ca3af' }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: '#9ca3af', maxRotation: 0, autoSkip: true }
+          }
+        }
       }
-    }catch(e){
-      lastItems = [];
-      if (btnExportXlsx) btnExportXlsx.style.display = "none";
-      showError("검색에 실패했습니다. 잠시 후 다시 시도해 주세요.", e?.message || String(e));
-      setStatus(`검색어: ${q} · 실패`);
+    });
+  }
+
+  function renderStats(stats) {
+    const c = document.getElementById('statsContainer');
+    const list = asArray(stats);
+
+    if (!list.length) {
+      c.innerHTML = `<div class="chart-description">표시할 통계가 없습니다.</div>`;
+      return;
+    }
+
+    c.innerHTML = `
+      <div class="metric-row" style="margin-top:0;">
+        ${list.slice(0, 16).map(x => {
+          const label = escapeHtml(x.label ?? x.name ?? 'Stat');
+          const value = escapeHtml(x.value ?? x.val ?? '-');
+          return `<span class="subtle-badge">${label}: ${value}</span>`;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  function renderNews(news) {
+    const c = document.getElementById('newsContainer');
+    const list = asArray(news);
+
+    if (!list.length) {
+      c.innerHTML = `<div class="chart-description">표시할 뉴스가 없습니다.</div>`;
+      return;
+    }
+
+    c.innerHTML = list.slice(0, 30).map(x => {
+      // news가 문자열 배열이라고 가정 (기존)
+      const text = String(x ?? '').trim();
+      const isUrl = /^https?:\/\/\S+/i.test(text);
+
+      return `
+        <div class="list-item">
+          <div class="list-title">${isUrl ? 'News Link' : 'News'}</div>
+          <div class="list-meta">
+            ${isUrl ? `<a href="${escapeHtml(text)}" target="_blank">열기 →</a>` : escapeHtml(text)}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderWhitepapers(wp) {
+    const c = document.getElementById('wpContainer');
+    const list = asArray(wp);
+
+    if (!list.length) {
+      c.innerHTML = `<div class="chart-description">표시할 화이트페이퍼가 없습니다.</div>`;
+      return;
+    }
+
+    c.innerHTML = list.slice(0, 24).map(x => {
+      const title = escapeHtml(x.title ?? x.name ?? 'Whitepaper');
+      const url = String(x.url ?? x.link ?? '').trim();
+
+      return `
+        <div class="list-item">
+          <div class="list-title">${title}</div>
+          <div class="list-meta">
+            ${url ? `<a href="${escapeHtml(url)}" target="_blank">문서 열기 →</a>` : '링크가 없습니다.'}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderOverviewBadges(stats) {
+    const metricRow = document.getElementById('metricRow');
+    const list = asArray(stats);
+
+    if (!list.length) {
+      metricRow.innerHTML = `<span class="metric-badge">Stats: 0</span>`;
+      document.getElementById('metricMeaning').style.display = 'block';
+      return;
+    }
+
+    metricRow.innerHTML = `
+      <span class="metric-badge">Stats: ${list.length}</span>
+      ${list.slice(0, 4).map(x => {
+        const label = escapeHtml(x.label ?? x.name ?? 'Stat');
+        const value = escapeHtml(x.value ?? x.val ?? '-');
+        return `<span class="subtle-badge">${label}: ${value}</span>`;
+      }).join('')}
+    `;
+
+    document.getElementById('metricMeaning').style.display = 'block';
+  }
+
+  async function loadData() {
+    try {
+      const res = await fetch('/.netlify/functions/interval');
+      const d = await res.json();
+
+      // 기존 interval 응답 형태 유지
+      const stats = d.stats ?? d.statistics ?? [];
+      const news = d.news ?? d.relatedNews ?? [];
+      const wp = d.whitepapers ?? d.research ?? d.wp ?? [];
+
+      renderOverviewBadges(stats);
+
+      // 수익률(차트) 렌더링
+      const seriesObj = pickReturnSeries(d);
+      renderReturnChart(seriesObj);
+
+      // 나머지 섹션
+      renderStats(stats);
+      renderNews(news);
+      renderWhitepapers(wp);
+
+    } catch (err) {
+      console.error('Error loading interval data:', err);
+      document.getElementById('metricRow').innerHTML = `<span class="metric-badge">Error</span>`;
+      document.getElementById('returnBadges').innerHTML = `<span class="metric-badge">Error</span>`;
+      document.getElementById('statsContainer').innerHTML = `<div class="error">데이터를 불러오는 중 오류가 발생했습니다.</div>`;
+      document.getElementById('newsContainer').innerHTML = `<div class="error">데이터를 불러오는 중 오류가 발생했습니다.</div>`;
+      document.getElementById('wpContainer').innerHTML = `<div class="error">데이터를 불러오는 중 오류가 발생했습니다.</div>`;
     }
   }
 
-  btnSearch.addEventListener("click", runSearch);
-  qInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") runSearch();
-  });
-
-  btnExportXlsx?.addEventListener("click", () => {
-    try{
-      if (!lastItems.length){
-        setStatus("엑셀로 내보낼 결과가 없습니다.");
-        return;
-      }
-      exportToXlsx(lastItems, lastQuery);
-      setStatus("엑셀 파일을 다운로드했습니다.");
-    }catch(e){
-      showError("엑셀 내보내기에 실패했습니다.", e?.message || String(e));
-    }
-  });
-}
-
-document.addEventListener("DOMContentLoaded", main);
+  document.addEventListener('DOMContentLoaded', loadData);
+</script>
+</body>
+</html>
