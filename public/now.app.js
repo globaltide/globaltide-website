@@ -222,14 +222,15 @@ function updateMarketRecentUI(data){
   let kor1 = null;
   if (korRes) kor1 = korRes.y1 ?? korRes.kor1 ?? korRes.yield1 ?? null;
 
-  const basis = -2.6;
+  const basis = 0.0;  // basis adjustment (fine-tune based on actual market swap quotes)
   const swapEl = document.getElementById('usdkrwSwap1y');
   const detailEl = document.getElementById('swapDetail');
 
   if (us1 != null && kor1 != null){
-    const diff = (Number(us1) - Number(kor1)) + basis;
+    // Correct formula: KOR1Y - US1Y + basis
+    const diff = (Number(kor1) - Number(us1)) + basis;
     if (swapEl) swapEl.textContent = fmtPct(diff);
-    if (detailEl) detailEl.textContent = '( US1Y: ' + fmt2(us1) + '% · KOR1Y: ' + fmt2(kor1) + '% )';
+    if (detailEl) detailEl.textContent = '( KOR1Y: ' + fmt2(kor1) + '% · US1Y: ' + fmt2(us1) + '% )';
   } else {
     if (swapEl) swapEl.textContent = '—';
     if (detailEl) detailEl.textContent = '';
