@@ -103,8 +103,13 @@ async function mapWithConcurrency(arr, n, fn){
 /**
  * Calls Netlify Function: /.netlify/functions/gt_search
  * Returns items with snippet + snippetKo (for english query)
+ *
+ * ✅ 추가: startDate/endDate (YYYY-MM-DD) 를 넘기면 서버에서 기간 필터 적용
  */
-export async function gtSearchNews(query, { limit = 30 } = {}){
+export async function gtSearchNews(
+  query,
+  { limit = 30, startDate = "", endDate = "" } = {}
+){
   const q = (query || "").trim();
   if (!q) return [];
 
@@ -114,15 +119,19 @@ export async function gtSearchNews(query, { limit = 30 } = {}){
     ? { hl: "ko", gl: "KR", ceid: "KR:ko" }
     : { hl: "en", gl: "US", ceid: "US:en" };
 
-  const url =
-    "/.netlify/functions/gt_search?" +
-    new URLSearchParams({
-      q,
-      hl: params.hl,
-      gl: params.gl,
-      ceid: params.ceid,
-      limit: String(Math.min(50, Math.max(1, Number(limit) || 30))),
-    }).toString();
+  const qs = new URLSearchParams({
+    q,
+    hl: params.hl,
+    gl: params.gl,
+    ceid: params.ceid,
+    limit: String(Math.min(50, Math.max(1, Number(limit) || 30))),
+  });
+
+  // ✅ 날짜 전달 (서버에서 start/end로 받음)
+  if ((startDate || "").trim()) qs.set("start", String(startDate).trim());
+  if ((endDate || "").trim())   qs.set("end",   String(endDate).trim());
+
+  const url = "/.netlify/functions/gt_search?" + qs.toString();
 
   let lastErr = null;
 
