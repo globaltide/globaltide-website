@@ -222,15 +222,15 @@ function updateMarketRecentUI(data){
   let kor1 = null;
   if (korRes) kor1 = korRes.y1 ?? korRes.kor1 ?? korRes.yield1 ?? null;
 
-  const basis = 0.0;  // basis adjustment (fine-tune based on actual market swap quotes)
+  const basis = -0.35;  // 고정 basis: -35bp
   const swapEl = document.getElementById('usdkrwSwap1y');
   const detailEl = document.getElementById('swapDetail');
 
   if (us1 != null && kor1 != null){
-    // Correct formula: KOR1Y - US1Y + basis
+    // KOR1Y - US1Y - 0.35%
     const diff = (Number(kor1) - Number(us1)) + basis;
     if (swapEl) swapEl.textContent = fmtPct(diff);
-    if (detailEl) detailEl.textContent = '( KOR1Y: ' + fmt2(kor1) + '% · US1Y: ' + fmt2(us1) + '% )';
+    if (detailEl) detailEl.textContent = '( KOR1Y: ' + fmt2(kor1) + '% · US1Y: ' + fmt2(us1) + '% - 35bp )';
   } else {
     if (swapEl) swapEl.textContent = '—';
     if (detailEl) detailEl.textContent = '';
