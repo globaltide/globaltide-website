@@ -18,7 +18,6 @@ function setAuthButtons(user){
 }
 
 function findDateButtonsContainer(){
-  // search.html 구조에 맞춰 "검색 기간" 섹션 안에서 찾아봄
   const section = document.querySelector(".date-filter-section");
   return section ? section.querySelector(".date-filter-buttons") : null;
 }
@@ -32,10 +31,7 @@ function getActivePeriod(){
 function applyPeriodToDates(period){
   const startEl = $("startDate");
   const endEl = $("endDate");
-  if (!startEl || !endEl) {
-    console.error("Date input elements not found");
-    return;
-  }
+  if (!startEl || !endEl) return;
 
   const now = new Date();
   const end = new Date(now);
@@ -44,7 +40,6 @@ function applyPeriodToDates(period){
   if (period === "all"){
     startEl.value = "";
     endEl.value = end.toISOString().slice(0,10);
-    console.log("Applied period 'all':", { start: "", end: endEl.value });
     return;
   }
 
@@ -55,7 +50,6 @@ function applyPeriodToDates(period){
 
   startEl.value = start.toISOString().slice(0,10);
   endEl.value = end.toISOString().slice(0,10);
-  console.log(`Applied period '${period}':`, { start: startEl.value, end: endEl.value });
 }
 
 async function main(){
@@ -75,8 +69,7 @@ async function main(){
   let currentUser = await getSessionUser(client);
   setAuthButtons(currentUser);
 
-  // default dates 적용
-  console.log("Applying default period on page load");
+  // default dates
   applyPeriodToDates(getActivePeriod());
 
   showKwPanel(false);
@@ -159,193 +152,6 @@ async function main(){
     if (e.key === "Enter") kwAddBtn?.click();
   });
 
-  // date buttons click - 이벤트 리스너 등록
-  const dateButtons = findDateButtonsContainer();
-  if (dateButtons) {
-    console.log("Date buttons container found, registering click handler");
-    dateButtons.addEventListener("click", (e) => {
-      const btn = e.target.closest(".date-btn");
-      if (!btn) return;
-      
-      console.log("Date button clicked:", btn.textContent, "period:", btn.getAttribute("data-period"));
-      
-      // active 클래스 업데이트
-      dateButtons.querySelectorAll(".date-btn").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      
-      // 날짜 적용
-      const period = btn.getAttribute("data-period") || "all";
-      applyPeriodToDates(period);
-    });
-  } else {
-    console.error("Date buttons container not found!");
-  }
-
-  let lastItems = [];
-  let lastQuery = "";
-
-  async function runSearch(){
-    const q = (qInput.value || "").trim();
-    if (!q){
-      setStatus("검색어를 입력하세요.");
-      return;
-    }
-    setLoading();
-    lastQuery = q;
-
-    const s = $("startDate")?.value || "";
-    const e = $("endDate")?.value || "";
-    const metaDate = (s || e) ? ` · 기간: ${s || "전체"} ~ ${e || "오늘"}` : "";
-
-    try{
-      const items = await gtSearchNews(q, { limit: 30 });
-      lastItems = items;
-      renderItems(items, `검색어: ${q} · 총 ${items.length}개${metaDate}`);
-      if (btnExportXlsx){
-        btnExportXlsx.style.display = items.length ? "inline-block" : "none";
-      }
-    }catch(e){
-      lastItems = [];
-      if (btnExportXlsx) btnExportXlsx.style.display = "none";
-      showError("검색에 실패했습니다. 잠시 후 다시 시도해 주세요.", e?.message || String(e));
-      setStatus(`검색어: ${q} · 실패`);
-    }
-  }
-
-  btnSearch.addEventListener("click", runSearch);
-  qInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") runSearch();
-  });
-
-  btnExportXlsx?.addEventListener("click", () => {
-    try{
-      if (!lastItems.length){
-        setStatus("엑셀로 내보낼 결과가 없습니다.");
-        return;
-      }
-      exportToXlsx(lastItems, lastQuery);
-      setStatus("엑셀 파일을 다운로드했습니다.");
-    }catch(e){
-      showError("엑셀 내보내기에 실패했습니다.", e?.message || String(e));
-    }
-  });
-}
-
-document.addEventListener("DOMContentLoaded", main);  const now = new Date();
-  const end = new Date(now);
-  const start = new Date(now);
-
-  if (period === "all"){
-    startEl.value = "";
-    endEl.value = end.toISOString().slice(0,10);
-    return;
-  }
-
-  if (period === "1m") start.setMonth(start.getMonth() - 1);
-  if (period === "3m") start.setMonth(start.getMonth() - 3);
-  if (period === "6m") start.setMonth(start.getMonth() - 6);
-  if (period === "1y") start.setFullYear(start.getFullYear() - 1);
-
-  startEl.value = start.toISOString().slice(0,10);
-  endEl.value = end.toISOString().slice(0,10);
-}
-
-async function main(){
-  const qInput = $("qInput");
-  const btnSearch = $("btnSearch");
-  const btnExportXlsx = $("btnExportXlsx");
-  const btnKeywordManage = $("btnKeywordManage");
-  const kwInput = $("kwInput");
-  const kwAddBtn = $("kwAddBtn");
-
-  if (!qInput || !btnSearch){
-    console.error("Search DOM missing");
-    return;
-  }
-
-  const client = createSupabaseClient();
-  let currentUser = await getSessionUser(client);
-  setAuthButtons(currentUser);
-
-  // default dates
-  applyPeriodToDates(getActivePeriod());
-
-  showKwPanel(false);
-
-  bindKeywordUIHandlers({
-    client,
-    getUser: () => currentUser,
-    onKeywordClicked: (kw) => {
-      qInput.value = kw;
-      btnSearch.click();
-    },
-    onDeleted: async () => {
-      await loadMyKeywords(client, currentUser);
-    }
-  });
-
-  $("btnLogin")?.addEventListener("click", async () => {
-    try{ await signInGoogle(client); }
-    catch(e){ showError("로그인에 실패했습니다.", e?.message || String(e)); }
-  });
-
-  $("btnLogout")?.addEventListener("click", async () => {
-    try{
-      await signOut(client);
-      currentUser = await getSessionUser(client);
-      setAuthButtons(currentUser);
-      showKwPanel(false);
-      setStatus("로그아웃되었습니다.");
-    }catch(e){
-      showError("로그아웃에 실패했습니다.", e?.message || String(e));
-    }
-  });
-
-  client.auth.onAuthStateChange(async () => {
-    currentUser = await getSessionUser(client);
-    setAuthButtons(currentUser);
-
-    const kwPanel = $("kwPanel");
-    if (kwPanel && kwPanel.style.display === "block" && currentUser){
-      $("kwUserLine").innerHTML = `현재 로그인: <b>${currentUser.email || ""}</b>`;
-      await loadMyKeywords(client, currentUser);
-      if (btnExportXlsx) btnExportXlsx.style.display = "inline-block";
-    }
-    if (!currentUser) showKwPanel(false);
-  });
-
-  btnKeywordManage?.addEventListener("click", async () => {
-    currentUser = await getSessionUser(client);
-    if (!currentUser){
-      try{ await signInGoogle(client); }
-      catch(e){ showError("로그인이 필요합니다.", e?.message || String(e)); }
-      return;
-    }
-
-    const kwPanel = $("kwPanel");
-    const open = kwPanel && kwPanel.style.display === "block";
-    showKwPanel(!open);
-
-    if (!open){
-      $("kwUserLine").innerHTML = `현재 로그인: <b>${currentUser.email || ""}</b>`;
-      await loadMyKeywords(client, currentUser);
-      if (btnExportXlsx) btnExportXlsx.style.display = "inline-block";
-    }
-  });
-
-  kwAddBtn?.addEventListener("click", async () => {
-    currentUser = await getSessionUser(client);
-    const ok = await addKeyword(client, currentUser, kwInput?.value || "");
-    if (ok){
-      if (kwInput) kwInput.value = "";
-      await loadMyKeywords(client, currentUser);
-      setStatus("키워드가 추가되었습니다.");
-    }
-  });
-  kwInput?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") kwAddBtn?.click();
-  });
-
   // date buttons click
   const dateButtons = findDateButtonsContainer();
   dateButtons?.addEventListener("click", (e) => {
@@ -366,7 +172,6 @@ async function main(){
       setStatus("검색어를 입력하세요.");
       return;
     }
-
     setLoading();
     lastQuery = q;
 
@@ -377,9 +182,7 @@ async function main(){
     try{
       const items = await gtSearchNews(q, { limit: 30 });
       lastItems = items;
-
       renderItems(items, `검색어: ${q} · 총 ${items.length}개${metaDate}`);
-
       if (btnExportXlsx){
         btnExportXlsx.style.display = items.length ? "inline-block" : "none";
       }
