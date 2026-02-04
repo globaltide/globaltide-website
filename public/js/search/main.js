@@ -175,12 +175,18 @@ async function main(){
     setLoading();
     lastQuery = q;
 
-    const s = $("startDate")?.value || "";
-    const e = $("endDate")?.value || "";
+    const s = ($("startDate")?.value || "").trim(); // YYYY-MM-DD
+    const e = ($("endDate")?.value || "").trim();   // YYYY-MM-DD
     const metaDate = (s || e) ? ` · 기간: ${s || "전체"} ~ ${e || "오늘"}` : "";
 
     try{
-      const items = await gtSearchNews(q, { limit: 30 });
+      // ✅ 핵심 수정: 날짜를 gtSearchNews로 전달
+      const items = await gtSearchNews(q, {
+        limit: 30,
+        startDate: s,
+        endDate: e
+      });
+
       lastItems = items;
       renderItems(items, `검색어: ${q} · 총 ${items.length}개${metaDate}`);
       if (btnExportXlsx){
