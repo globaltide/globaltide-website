@@ -28,15 +28,9 @@
   #topbar {
     position:fixed; top:0; left:0; right:0; z-index:25;
     padding: calc(var(--safe-top) + 12px) 16px 12px;
-    display:flex; align-items:center; justify-content:space-between;
-    background:linear-gradient(180deg, rgba(0,5,16,0.85) 0%, rgba(0,5,16,0) 100%);
+    display:flex; align-items:center; justify-content:flex-end;
     pointer-events:none;
   }
-  #title {
-    color:#fff; font-size:16px; font-weight:700;
-    letter-spacing:-0.3px; text-shadow:0 2px 8px rgba(0,0,0,0.6);
-  }
-  #title small { font-weight:400; color:#7da8c8; font-size:12px; }
 
   /* ===== 지수 토글 버튼 ===== */
   #stocks-toggle {
@@ -144,7 +138,6 @@
     #stocks.open { transform: translateX(0); }
     #sheet-handle { display:none; }
     #stock-list { max-height:calc(76vh - 80px); }
-    #title { font-size:18px; }
   }
 
   /* ===== 위치 안내 라벨 ===== */
@@ -164,12 +157,9 @@
 </style>
 </head>
 <body>
-<div id="info">🌍 Globe Explorer &nbsp;·&nbsp; 드래그로 회전 &nbsp;·&nbsp; 스크롤로 줌</div>
-<div id="label" id="label"></div>
 <div id="hint"></div>
 <div id="label"></div>
 <div id="topbar">
-  <div id="title">🌍 Globe Explorer <small>주식 지수</small></div>
   <div id="stocks-toggle" onclick="toggleStocks()"><span>📊</span><span>지수</span></div>
 </div>
 <div id="stocks">
@@ -15341,34 +15331,68 @@ function loop(ts) {
 }
 requestAnimationFrame(loop);
 
-// ── 시트 스와이프 닫기 ─────────────────────────────────────
+// ── 시트 스와이프 닫기 (개선) ──────────────────────────────
 (function(){
   const sheet = document.getElementById('stocks');
   const handle = document.getElementById('sheet-handle');
-  let startY = 0, dragging = false;
-  function onStart(y){ startY = y; dragging = true; sheet.style.transition = 'none'; }
+  const header = sheet.querySelector('h3');
+  const list = document.getElementById('stock-list');
+  let startY = 0, lastY = 0, dragging = false, startTime = 0;
+
+  function onStart(y){
+    startY = y; lastY = y; startTime = Date.now();
+    dragging = true;
+    sheet.style.transition = 'none';
+  }
   function onMove(y){
     if(!dragging) return;
+    lastY = y;
     const dy = Math.max(0, y - startY);
     sheet.style.transform = 'translateY(' + dy + 'px)';
   }
-  function onEnd(y){
+  function onEnd(){
     if(!dragging) return;
     dragging = false;
     sheet.style.transition = '';
     sheet.style.transform = '';
-    if (y - startY > 80) sheet.classList.remove('open');
+    const dy = lastY - startY;
+    const dt = Date.now() - startTime;
+    const velocity = dy / Math.max(dt, 1);  // px/ms
+    // 80px 이상 내리거나, 빠르게 아래로 스와이프하면 닫기
+    if (dy > 80 || velocity > 0.4) {
+      sheet.classList.remove('open');
+    }
   }
-  handle.addEventListener('touchstart', e=>onStart(e.touches[0].clientY), {passive:true});
-  handle.addEventListener('touchmove', e=>onMove(e.touches[0].clientY), {passive:true});
-  handle.addEventListener('touchend', e=>onEnd(e.changedTouches[0].clientY), {passive:true});
-  handle.addEventListener('mousedown', e=>{
-    onStart(e.clientY);
-    const mm = ev=>onMove(ev.clientY);
-    const mu = ev=>{ onEnd(ev.clientY); document.removeEventListener('mousemove',mm); document.removeEventListener('mouseup',mu); };
-    document.addEventListener('mousemove', mm);
-    document.addEventListener('mouseup', mu);
+
+  // 핸들 + 헤더 영역에서 드래그 시작 가능
+  [handle, header].forEach(el => {
+    el.addEventListener('touchstart', e=>onStart(e.touches[0].clientY), {passive:true});
+    el.addEventListener('touchmove', e=>onMove(e.touches[0].clientY), {passive:true});
+    el.addEventListener('touchend', onEnd, {passive:true});
+    el.addEventListener('mousedown', e=>{
+      onStart(e.clientY);
+      const mm = ev=>onMove(ev.clientY);
+      const mu = ev=>{ onEnd(); document.removeEventListener('mousemove',mm); document.removeEventListener('mouseup',mu); };
+      document.addEventListener('mousemove', mm);
+      document.addEventListener('mouseup', mu);
+    });
   });
+
+  // 리스트를 맨 위까지 스크롤한 상태에서 아래로 당기면 닫기
+  list.addEventListener('touchstart', e=>{
+    if (list.scrollTop <= 0) { startY = e.touches[0].clientY; lastY = startY; }
+  }, {passive:true});
+  list.addEventListener('touchmove', e=>{
+    if (list.scrollTop <= 0) {
+      const dy = e.touches[0].clientY - startY;
+      if (dy > 0) {
+        if (!dragging) { dragging = true; startTime = Date.now(); sheet.style.transition='none'; }
+        lastY = e.touches[0].clientY;
+        sheet.style.transform = 'translateY(' + dy + 'px)';
+      }
+    }
+  }, {passive:true});
+  list.addEventListener('touchend', e=>{ if(dragging) onEnd(); }, {passive:true});
 })();
 
 // ── 주식 지수 시스템 ───────────────────────────────────────
@@ -15631,9 +15655,13 @@ window._selectedStock = null;
 window.flyToStock = function(sym) {
   const idx = STOCK_INDICES.find(i => i.sym === sym);
   if (idx) {
-    flyTo(idx.lat, idx.lon);  // 줌 변경 없음
+    // 패널이 열려 있으면 닫기 (지구가 잘 보이게)
+    const panel = document.getElementById('stocks');
+    if (panel) panel.classList.remove('open');
+    // 해당 거래소 위치로 회전 (줌 변경 없음)
+    flyTo(idx.lat, idx.lon);
+    // 선택 표시 + 라벨 강조
     window._selectedStock = sym;
-    // 선택된 스프라이트는 다시 그려서 강조
     placeStockSprites();
   }
 };
@@ -15644,28 +15672,43 @@ window.toggleStocks = function() {
   panel.classList.toggle('open');
 };
 
-async function loadStocks() {
-  document.getElementById('data-status').textContent = '데이터 가져오는 중...';
+// 즉시 mock 데이터로 화면 채우기 (대기 없음)
+function loadStocksInstant() {
+  STOCK_INDICES.forEach(idx => {
+    if (!window._stockData[idx.sym]) {
+      window._stockData[idx.sym] = generateMockData(idx);
+    }
+  });
+  renderStockList();
+  placeStockSprites();
+  const statusEl = document.getElementById('data-status');
+  if (statusEl) {
+    statusEl.textContent = '\u{1F4C5} 기준 데이터 표시 중 \u00b7 실시간 확인 중...';
+    statusEl.style.color = '#9aa';
+  }
+}
 
-  // Yahoo Finance chart API를 종목별로 호출.
-  // 브라우저 CORS 차단을 우회하기 위해 여러 프록시를 순차 시도.
+// 백그라운드에서 실시간(전일 종가) 데이터 가져오기
+async function loadStocks() {
+  const statusEl = document.getElementById('data-status');
+  if (statusEl && statusEl.textContent.indexOf('확인 중') < 0) {
+    statusEl.textContent = '\u{1F504} 최신 데이터 확인 중...';
+    statusEl.style.color = '#9aa';
+  }
+
   const corsProxies = [
     (u) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
     (u) => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
-    (u) => 'https://thingproxy.freeboard.io/fetch/' + u,
-    (u) => u,  // 마지막: 프록시 없이 직접 (일부 브라우저/환경에서 동작)
+    (u) => u,
   ];
-
-  // Yahoo chart API는 전일 종가(previousClose)와 현재가를 모두 제공
   function yahooUrl(sym) {
-    return 'https://query1.finance.yahoo.com/v8/finance/chart/' +
-           encodeURIComponent(sym);
+    return 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(sym);
   }
 
   async function fetchOne(sym) {
     for (const proxy of corsProxies) {
       try {
-        const res = await fetch(proxy(yahooUrl(sym)), { signal: AbortSignal.timeout(8000) });
+        const res = await fetch(proxy(yahooUrl(sym)), { signal: AbortSignal.timeout(4000) });
         if (!res.ok) continue;
         const j = await res.json();
         const r = j.chart && j.chart.result && j.chart.result[0];
@@ -15681,43 +15724,40 @@ async function loadStocks() {
           prevClose: prevClose,
           isMock: false,
         };
-      } catch (e) { /* 다음 프록시 시도 */ }
+      } catch (e) {}
     }
     return null;
   }
 
-  // 모든 종목 병렬 요청
   let successCount = 0;
   await Promise.all(STOCK_INDICES.map(async (idx) => {
     const data = await fetchOne(idx.sym);
     if (data) {
       window._stockData[idx.sym] = data;
       successCount++;
-    } else {
-      // 실패한 종목은 mock으로
-      window._stockData[idx.sym] = generateMockData(idx);
     }
   }));
 
-  // 상태 표시
-  const statusEl = document.getElementById('data-status');
-  if (successCount === STOCK_INDICES.length) {
-    statusEl.textContent = '\u2705 실시간 데이터 \u00b7 ' + new Date().toLocaleTimeString('ko-KR');
-    statusEl.style.color = '#4ade80';
-  } else if (successCount > 0) {
-    statusEl.textContent = '\u26a0 ' + successCount + '/' + STOCK_INDICES.length +
-                           '개 실시간, 나머지 추정치';
-    statusEl.style.color = '#fbbf24';
-  } else {
-    statusEl.textContent = '\u26a0 시뮬레이션 데이터 (네트워크 차단)';
-    statusEl.style.color = '#f87171';
-  }
-
+  // 갱신된 데이터로 다시 렌더 (성공한 것만 바뀜)
   renderStockList();
   placeStockSprites();
+
+  if (statusEl) {
+    if (successCount === STOCK_INDICES.length) {
+      statusEl.textContent = '\u2705 실시간 데이터 \u00b7 ' + new Date().toLocaleTimeString('ko-KR');
+      statusEl.style.color = '#4ade80';
+    } else if (successCount > 0) {
+      statusEl.textContent = '\u26a0 ' + successCount + '/' + STOCK_INDICES.length + '개 실시간, 나머지 기준치';
+      statusEl.style.color = '#fbbf24';
+    } else {
+      statusEl.textContent = '\u{1F4C5} 기준 데이터 (' + new Date().toLocaleDateString('ko-KR') + ' 기준)';
+      statusEl.style.color = '#9aa';
+    }
+  }
 }
 
-// 시작
+// 시작: 즉시 mock 표시 → 백그라운드로 실시간 갱신
+loadStocksInstant();
 loadStocks();
 // 5분마다 자동 새로고침
 setInterval(loadStocks, 5 * 60 * 1000);
